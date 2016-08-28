@@ -1,0 +1,94 @@
+#!/usr/bin/env node
+
+const file = require('../src/index');
+const inquirer = require('inquirer');
+const init = require('../src/init');
+const jcrypt = require('jcrypt');
+const util = require('../src/util');
+
+const argv = require('yargs')
+    .usage('Usage: stymie <command> [options]')
+    .example('stymie init', 'Installs')
+    .command('init', 'Install the file directory and config file')
+
+    .command('', '')
+
+    .example('stymie add', 'Adds a new file')
+    .command('add', 'Add a new file')
+
+    .example('stymie get', 'Retrieves a file')
+    .command('get', 'Get a file')
+
+    .example('stymie edit', 'Edits a file')
+    .command('edit', 'Alias of `get`')
+
+    .example('stymie has', 'Checks if the file exists')
+    .command('has', 'Check if the file exists')
+
+    .example('stymie list', 'Lists all files')
+    .command('list', 'List all files')
+    .command('ls', 'Alias of `list`')
+
+    .example('stymie rm', 'Deletes a file')
+    .command('rm', 'Delete a file')
+
+    .help('h')
+    .alias('h', 'help')
+    .argv;
+
+const command = argv._[0];
+const env = process.env;
+const stymieDir = `${env.STYMIE || env.HOME}/.stymie.d`;
+
+if (command === 'init') {
+    // TODO: Allow multiple installations in multiple locations?
+    util.fileExists(`${stymieDir}/c`)
+    .then(() => util.logWarn('Stymie already exists!'))
+    .catch(init);
+} else {
+    util.fileExists(`${stymieDir}/c`)
+    .then(configFile =>
+        jcrypt.decryptFile(configFile)
+        .then(data => {
+            util.setGPGOptions(data);
+
+            switch (command) {
+                case 'add': file.add(argv._[1]); break;
+
+                case 'edit':
+                case 'get': file.get(argv._[1]); break;
+
+                case 'has': file.has(argv._[1]); break;
+
+                case 'ls':
+                case 'list': file.list(); break;
+
+                case 'rm': file.rm(argv._[1]); break;
+
+                default: util.logError('Bad command');
+            }
+        })
+        .catch(util.logError)
+    )
+    .catch(err => {
+        // TODO: Canceling GPG when asking for passphrase will get here, THIS IS NOT GOOD!
+        util.logWarn('It appears that stymie is not installed.\n');
+
+        inquirer.prompt([{
+            type: 'list',
+            name: 'install',
+            message: 'Install now?:',
+            choices: [
+                {name: 'Yes', value: true},
+                {name: 'No', value: false}
+            ]
+        }], answers => {
+            if (!answers.install) {
+                util.logInfo('Aborting install.');
+            } else {
+                init();
+            }
+        });
+    });
+}
+

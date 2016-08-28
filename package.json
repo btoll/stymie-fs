@@ -1,0 +1,39 @@
+{
+  "name": "stymie-fs",
+  "version": "0.1.0",
+  "description": "Cryptographically secure file manager for NodeJS",
+  "bin": {
+    "stymie-fs": "./bin/stymie-fs"
+  },
+  "main": "./src/index.js",
+  "scripts": {
+    "lint": "eslint src bin",
+    "test": "npm run lint"
+  },
+  "keywords": [
+    "file manager",
+    "secure file manager",
+    "cryptography",
+    "GPG",
+    "PGP"
+  ],
+  "author": "Benjamin Toll",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/btoll/stymie-fs"
+  },
+  "dependencies": {
+    "inquirer": "^0.11.0",
+    "jcrypt": "git+https://github.com/btoll/jcrypt.git",
+    "logger": "git+https://github.com/btoll/logger.git",
+    "mkdirp": "^0.5.1",
+    "ramda": "^0.22.1",
+    "which": "^1.2.4",
+    "yargs": "^3.31.0"
+  },
+  "devDependencies": {
+    "eslint": "^2.2.0"
+  }
+}
+
