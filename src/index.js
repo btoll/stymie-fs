@@ -2,7 +2,6 @@
 
 const R = require('ramda');
 const cp = require('child_process');
-const fs = require('fs');
 const inquirer = require('inquirer');
 const jcrypt = require('jcrypt');
 const mkdirp = require('mkdirp');
@@ -129,31 +128,37 @@ const file = {
         const hashedFilename = util.hashFilename(basename);
 
         util.fileExists(`${filedir}/${path.dirname(key)}/${hashedFilename}`)
-        .then(() => logInfo('File exists'))
+        .then(() => logSuccess('File exists'))
         .catch(logError);
     },
 
-    list: () =>
+    list: (start) =>
         jcrypt.decryptFile(treeFile)
         .then(data => {
             let list = JSON.parse(data);
 
-            fs.readdir(filedir, (err, files) => {
-                if (!files.length) {
-                    logInfo('No files');
-                } else {
-                    const entries = files.reduce((acc, curr) => (
-                        acc.push(
-                            typeof list[curr] === 'object' ?
-                                `${curr}/` :
-                                list[curr]
-                        ),
-                        acc
-                    ), []);
+            if (!list) {
+                logInfo('No files');
+            } else {
+                const replaced = start.replace(/^\/|\/$/g, '').replace(/\//g, '.');
+                const base = !start ? list : util.walkObject(list, replaced);
+
+                if (base) {
+                    const entries = [];
+
+                    for (let entry of Object.keys(base)) {
+                        entries.push(
+                            (typeof base[entry] === 'object') ?
+                                `${entry}/` :
+                                entry
+                        );
+                    }
 
                     logInfo(`Installed files: \n${entries.join('\n')}`);
+                } else {
+                    logError('There was a TypeError attempting to parse the tree object. Bad object lookup?');
                 }
-            });
+            }
         })
         .catch(logError),
 

@@ -61,7 +61,7 @@ if (command === 'init') {
                 case 'has': file.has(argv._[1]); break;
 
                 case 'ls':
-                case 'list': file.list(); break;
+                case 'list': file.list(argv._[1]); break;
 
                 case 'rm': file.rm(argv._[1]); break;
 

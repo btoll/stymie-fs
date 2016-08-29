@@ -72,6 +72,19 @@ const util = {
 
     setGPGOptions: data => gpgOptions = JSON.parse(data),
 
+    walkObject: (o, str) => {
+        const idx = str.indexOf('.');
+
+        if (~idx) {
+            // If fn is called with 'foo.bar.baz', recurse, i.e.:
+            //      fn(o['foo'], 'bar.baz');
+            //      fn(o['bar'], 'baz');
+            return util.walkObject(o[str.slice(0, idx)], str.slice(idx + 1));
+        } else {
+            return o[str];
+        }
+    },
+
     writeDirs: (list, it) => {
         let l = list;
 
@@ -102,7 +115,7 @@ const util = {
 
     writeKeyToTreeFile: R.curry((key, list) => {
         const dirname = path.dirname(key);
-        const hashedFilename = util.hashFilename(path.basename(key));
+//        const hashedFilename = util.hashFilename(path.basename(key));
 
         if (dirname !== '.') {
             util.writeDirsToTreeFile(dirname, list);
@@ -110,9 +123,11 @@ const util = {
             // Now write the file into the last object.
             util.makeListOfDirs(dirname).reduce(
                 (acc, curr) => (acc = acc[curr], acc), list
-            )[hashedFilename] = path.basename(key);
+//            )[hashedFilename] = path.basename(key);
+            )[path.basename(key)] = true;
         } else {
-            list[hashedFilename] = path.basename(key);
+//            list[hashedFilename] = path.basename(key);
+            list[path.basename(key)] = true;
         }
 
         return list;
