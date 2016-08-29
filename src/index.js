@@ -40,32 +40,30 @@ const file = {
         const defaultFileOptions = util.getDefaultFileOptions();
         const gpgArgs = util.getGPGArgs();
         const hashedFilename = util.hashFilename(path.basename(key));
-        const writeFile = util.writeFile(defaultFileOptions);
-        const writeKeyFile = writeFile(`${basedir}/${hashedFilename}`);
+
+        const writeKeyFile = util.writeFile(defaultFileOptions, `${basedir}/${hashedFilename}`);
+        const writeTreeFile = util.writeFile(defaultFileOptions, treeFile);
 
         const stringifyTreeFile = data => JSON.stringify(data, null, 4);
         const writeDirsToTreeFile = util.writeDirsToTreeFile(key);
         const writeKeyToTreeFile = util.writeKeyToTreeFile(key);
-        const writeTreeFile = writeFile(treeFile);
         const encryptData = jcrypt.encrypt(gpgArgs);
 
-        // Now that the new file has been added we need to record it in the "treefile"
-        // in order to do lookups.
-        const writeDirsToTreeFilePipe = R.compose(encryptData, stringifyTreeFile, writeDirsToTreeFile, JSON.parse);
-        const writeKeyToTreeFilePipe = R.compose(encryptData, stringifyTreeFile, writeKeyToTreeFile, JSON.parse);
-
-        const decryptAndEncryptTreeFile = R.composeP(
-            R.composeP(writeTreeFile, writeDirsToTreeFilePipe, jcrypt.decryptFile)
-        );
-
-        const decryptAndEncryptTreeFile2 = R.composeP(
-            R.composeP(writeTreeFile, writeKeyToTreeFilePipe, jcrypt.decryptFile)
-        );
+        const foo = fn =>
+            R.composeP(
+                R.composeP(
+                    writeTreeFile,
+                    // Now that the new file has been added we need to record it in the "treefile"
+                    // in order to do lookups.
+                    R.compose(encryptData, stringifyTreeFile, fn, JSON.parse),
+                    jcrypt.decryptFile
+                )
+            );
 
         const createEncryptedFile = () =>
             encryptData(key)
             .then(writeKeyFile)
-            .then(() => decryptAndEncryptTreeFile2(treeFile))
+            .then(() => foo(writeKeyToTreeFile)(treeFile))
             .then(() => logSuccess('File created successfully'))
             .catch(logError);
 
@@ -75,7 +73,7 @@ const file = {
                 if (err) {
                     logError('Could not create directory');
                 } else {
-                    decryptAndEncryptTreeFile(treeFile);
+                    foo(writeDirsToTreeFile)(treeFile);
                 }
             });
         } else {
@@ -140,8 +138,12 @@ const file = {
             if (!list) {
                 logInfo('No files');
             } else {
-                const replaced = start.replace(/^\/|\/$/g, '').replace(/\//g, '.');
-                const base = !start ? list : util.walkObject(list, replaced);
+                const base = !start ?
+                    list :
+                    util.walkObject(
+                        list,
+                        start.replace(/^\/|\/$/g, '').replace(/\//g, '.')
+                    );
 
                 if (base) {
                     const entries = [];

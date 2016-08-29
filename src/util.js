@@ -81,7 +81,7 @@ const util = {
             //      fn(o['bar'], 'baz');
             return util.walkObject(o[str.slice(0, idx)], str.slice(idx + 1));
         } else {
-            return o[str];
+            return !o ? null : o[str];
         }
     },
 
