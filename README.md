@@ -45,8 +45,8 @@ stymie-fs rm secrets
     Command | Description
     ------- | --------
     add | Adds a new file or directory
-    get | Retrieves a file
     edit | Edits a file
+    get | Retrieves a file
     has | Checks if the file exists
     list | List all files (TODO)
     rm | Deletes a file

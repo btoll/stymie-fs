@@ -7,7 +7,7 @@ const jcrypt = require('jcrypt');
 const util = require('../src/util');
 
 const argv = require('yargs')
-    .usage('Usage: stymie <command> [options]')
+    .usage('Usage: stymie-fs <command> [options]')
     .example('stymie init', 'Installs')
     .command('init', 'Install the file directory and config file')
 
@@ -16,11 +16,11 @@ const argv = require('yargs')
     .example('stymie add', 'Adds a new file')
     .command('add', 'Add a new file')
 
-    .example('stymie get', 'Retrieves a file')
-    .command('get', 'Get a file')
-
     .example('stymie edit', 'Edits a file')
-    .command('edit', 'Alias of `get`')
+    .command('edit', 'Edit a file')
+
+    .example('stymie get', 'Retrieves a file')
+    .command('get', 'Alias of `edit`')
 
     .example('stymie has', 'Checks if the file exists')
     .command('has', 'Check if the file exists')

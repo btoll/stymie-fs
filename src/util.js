@@ -72,6 +72,8 @@ const util = {
 
     setGPGOptions: data => gpgOptions = JSON.parse(data),
 
+    stripBeginningSlash: filename => filename.replace(/^\//, ''),
+
     walkObject: (o, str) => {
         const idx = str.indexOf('.');
 

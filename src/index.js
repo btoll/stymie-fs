@@ -4,7 +4,6 @@ const R = require('ramda');
 const cp = require('child_process');
 const inquirer = require('inquirer');
 const jcrypt = require('jcrypt');
-const mkdirp = require('mkdirp');
 const path = require('path');
 const util = require('./util');
 const which = require('which');
@@ -35,18 +34,18 @@ const file = {
             return;
         }
 
-        const dirname = path.dirname(key);
-        const basedir = dirname !== '.' ? `${filedir}/${dirname}` : filedir;
+        const newKey = util.stripBeginningSlash(key);
+
         const defaultFileOptions = util.getDefaultFileOptions();
         const gpgArgs = util.getGPGArgs();
-        const hashedFilename = util.hashFilename(path.basename(key));
+        const hashedFilename = util.hashFilename(util.stripBeginningSlash(newKey));
 
-        const writeKeyFile = util.writeFile(defaultFileOptions, `${basedir}/${hashedFilename}`);
+        const writeKeyFile = util.writeFile(defaultFileOptions, `${filedir}/${hashedFilename}`);
         const writeTreeFile = util.writeFile(defaultFileOptions, treeFile);
 
         const stringifyTreeFile = data => JSON.stringify(data, null, 4);
-        const writeDirsToTreeFile = util.writeDirsToTreeFile(key);
-        const writeKeyToTreeFile = util.writeKeyToTreeFile(key);
+        const writeDirsToTreeFile = util.writeDirsToTreeFile(newKey);
+        const writeKeyToTreeFile = util.writeKeyToTreeFile(newKey);
         const encryptData = jcrypt.encrypt(gpgArgs);
 
         const foo = fn =>
@@ -60,58 +59,35 @@ const file = {
                 )
             );
 
-        const createEncryptedFile = () =>
-            encryptData(key)
-            .then(writeKeyFile)
-            .then(() => foo(writeKeyToTreeFile)(treeFile))
-            .then(() => logSuccess('File created successfully'))
-            .catch(logError);
-
         // Creating an already-existing dir doesn't throw, but maybe clean this up.
-        if (/\/$/.test(key)) {
-            mkdirp(`${filedir}/${key}`, err => {
-                if (err) {
-                    logError('Could not create directory');
-                } else {
-                    foo(writeDirsToTreeFile)(treeFile);
-                }
-            });
+        if (/\/$/.test(newKey)) {
+            foo(writeDirsToTreeFile)(treeFile)
+            .then(logSuccess);
         } else {
             // This seems counter-intuitive because the resolve and reject operations
             // are reversed, but this is b/c the success case is when the file does not
             // exist (and thus will throw an exception).
-            util.fileExists(`${basedir}/${hashedFilename}`)
+            util.fileExists(`${filedir}/${hashedFilename}`)
             .then(() => logError('File already exists'))
             .catch(() =>
-                // If the dir already exists then it's safe to create the new file.
-                util.fileExists(basedir)
-                .then(createEncryptedFile)
-                .catch(() => {
-                    // Else, first create the new directory.
-                    mkdirp(basedir, err => {
-                        if (err) {
-                            logError('Could not create directory');
-                        } else {
-                            createEncryptedFile();
-                        }
-                    });
-                })
+                encryptData(newKey)
+                .then(writeKeyFile)
+                .then(() => foo(writeKeyToTreeFile)(treeFile))
+                .then(() => logSuccess('File created successfully'))
+                .catch(logError)
             );
         }
     },
 
     get: key => {
-        const defaultFileOptions = util.getDefaultFileOptions();
-        const basename = path.basename(key);
-        const hashedFilename = util.hashFilename(basename);
-        const pathToKey = `${filedir}/${path.dirname(key)}/${hashedFilename}`;
+        const keyPath = `${filedir}/${util.hashFilename(util.stripBeginningSlash(key))}`;
 
-        util.fileExists(pathToKey).then(() =>
-            jcrypt.decryptToFile(pathToKey)
+        util.fileExists(keyPath).then(() =>
+            jcrypt.decryptToFile(keyPath)
             .then(() => {
-                openEditor(pathToKey, () =>
+                openEditor(keyPath, () =>
                     // Re-encrypt once done.
-                    jcrypt.encryptToFile(pathToKey, null, util.getGPGArgs(), defaultFileOptions)
+                    jcrypt.encryptToFile(keyPath, null, util.getGPGArgs(), util.getDefaultFileOptions())
                     .then(() => logInfo('Re-encrypting and closing the file'))
                     .catch(logError)
                 );
@@ -122,10 +98,7 @@ const file = {
     },
 
     has: key => {
-        const basename = path.basename(key);
-        const hashedFilename = util.hashFilename(basename);
-
-        util.fileExists(`${filedir}/${path.dirname(key)}/${hashedFilename}`)
+        util.fileExists(`${filedir}/${util.hashFilename(util.stripBeginningSlash(key))}`)
         .then(() => logSuccess('File exists'))
         .catch(logError);
     },
@@ -189,7 +162,7 @@ const file = {
         }
 
         return key => {
-            const hashedFilename = util.hashFilename(key);
+            const hashedFilename = util.hashFilename(util.stripBeginningSlash(key));
             const path = `${filedir}/${hashedFilename}`;
 
             util.fileExists(path)
