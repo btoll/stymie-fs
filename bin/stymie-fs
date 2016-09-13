@@ -38,7 +38,7 @@ const argv = require('yargs')
 
 const command = argv._[0];
 const env = process.env;
-const stymieDir = `${env.STYMIE || env.HOME}/.stymie.d`;
+const stymieDir = `${env.STYMIE_FS || env.HOME}/.stymie_fs.d`;
 
 if (command === 'init') {
     // TODO: Allow multiple installations in multiple locations?

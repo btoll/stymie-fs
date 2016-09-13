@@ -13,12 +13,12 @@ module.exports = () =>
     require('inquirer').prompt([{
         type: 'input',
         name: 'installDir',
-        message: 'Enter directory to install .stymie.d:',
+        message: 'Enter directory to install .stymie_fs.d:',
         default: '~'
     }, {
         type: 'input',
         name: 'envFile',
-        message: 'We need to export a $STYMIE environment variable.\nName of shell startup file to which the new env var should be written:',
+        message: 'We need to export a $STYMIE_FS environment variable.\nName of shell startup file to which the new env var should be written:',
         default: '.bashrc',
         when: answers => answers.installDir !== '~'
     }, {
@@ -61,7 +61,7 @@ module.exports = () =>
     }, {
         type: 'list',
         name: 'histignore',
-        message: 'Should "stymie *" be prepended to the value of $HISTIGNORE?',
+        message: 'Should "stymie-fs *" be prepended to the value of $HISTIGNORE?',
         choices: [
             {name: 'Yes', value: true},
             {name: 'No', value: false}
@@ -94,7 +94,7 @@ module.exports = () =>
             installDir = home;
         }
 
-        stymieDir = `${installDir}/.stymie.d`;
+        stymieDir = `${installDir}/.stymie_fs.d`;
 
         function mkDir(dir) {
             return new Promise((resolve, reject) =>
@@ -143,7 +143,7 @@ module.exports = () =>
                 const histignoreFile = `${home}/${answers.histignoreFile}`;
 
                 return new Promise((resolve, reject) =>
-                    fs.appendFile(histignoreFile, 'export HISTIGNORE="stymie *:$HISTIGNORE"\n', 'utf8', (err) => {
+                    fs.appendFile(histignoreFile, 'export HISTIGNORE="stymie-fs *:$HISTIGNORE"\n', 'utf8', (err) => {
                         if (err) {
                             reject(err);
                         } else {

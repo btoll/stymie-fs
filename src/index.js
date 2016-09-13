@@ -9,8 +9,9 @@ const util = require('./util');
 const which = require('which');
 
 const env = process.env;
-const filedir = `${env.STYMIE || env.HOME}/.stymie.d/s`;
-const treeFile = `${env.STYMIE || env.HOME}/.stymie.d/f`;
+const stymieDir = `${env.STYMIE_FS || env.HOME}/.stymie_fs.d`;
+const filedir = `${stymieDir}/s`;
+const treeFile = `${stymieDir}/f`;
 const logError = util.logError;
 const logInfo = util.logInfo;
 const logSuccess = util.logSuccess;
@@ -103,36 +104,37 @@ const file = {
         .catch(logError);
     },
 
-    list: (start) =>
+    list: start =>
         jcrypt.decryptFile(treeFile)
         .then(data => {
             let list = JSON.parse(data);
 
-            if (!list) {
-                logInfo('No files');
-            } else {
-                const base = !start ?
-                    list :
-                    util.walkObject(
-                        list,
-                        start.replace(/^\/|\/$/g, '').replace(/\//g, '.')
+            const base = !start ?
+                list :
+                util.walkObject(
+                    list,
+                    start.replace(/^\/|\/$/g, '').replace(/\//g, '.')
+                );
+
+            if (base) {
+                const entries = [];
+
+                for (let entry of Object.keys(base)) {
+                    // Here all we're doing is adding a trailing '/' if the entry is a dir.
+                    entries.push(
+                        (typeof base[entry] === 'object') ?
+                            `${entry}/` :
+                            entry
                     );
-
-                if (base) {
-                    const entries = [];
-
-                    for (let entry of Object.keys(base)) {
-                        entries.push(
-                            (typeof base[entry] === 'object') ?
-                                `${entry}/` :
-                                entry
-                        );
-                    }
-
-                    logInfo(`Installed files: \n${entries.join('\n')}`);
-                } else {
-                    logError('There was a TypeError attempting to parse the tree object. Bad object lookup?');
                 }
+
+                logInfo(
+                    entries.length ?
+                        `Installed files: \n${entries.join('\n')}` :
+                        'No files'
+                );
+            } else {
+                logError('There was a TypeError attempting to parse the tree object. Bad object lookup?');
             }
         })
         .catch(logError),
