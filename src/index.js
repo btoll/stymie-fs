@@ -6,14 +6,13 @@ const inquirer = require('inquirer');
 const jcrypt = require('jcrypt');
 const path = require('path');
 const util = require('./util');
-const which = require('which');
 
 const env = process.env;
 const stymieDir = `${env.STYMIE_FS || env.HOME}/.stymie_fs.d`;
 const filedir = `${stymieDir}/s`;
 const treeFile = `${stymieDir}/f`;
 const logError = util.logError;
-const logInfo = util.logInfo;
+const logInfo = util.log;
 const logSuccess = util.logSuccess;
 
 function openEditor(file, callback) {
@@ -39,7 +38,7 @@ const file = {
 
         const defaultFileOptions = util.getDefaultFileOptions();
         const gpgArgs = util.getGPGArgs();
-        const hashedFilename = util.hashFilename(util.stripBeginningSlash(newKey));
+        const hashedFilename = util.hashFilename(newKey);
 
         const writeKeyFile = util.writeFile(defaultFileOptions, `${filedir}/${hashedFilename}`);
         const writeTreeFile = util.writeFile(defaultFileOptions, treeFile);
@@ -99,6 +98,11 @@ const file = {
     },
 
     has: key => {
+        if (!key) {
+            logError('Must supply a file name');
+            return;
+        }
+
         util.fileExists(`${filedir}/${util.hashFilename(util.stripBeginningSlash(key))}`)
         .then(() => logSuccess('File exists'))
         .catch(logError);
@@ -107,14 +111,19 @@ const file = {
     list: start =>
         jcrypt.decryptFile(treeFile)
         .then(data => {
+            let base = null;
             let list = JSON.parse(data);
 
-            const base = !start ?
-                list :
-                util.walkObject(
+            if (!start) {
+                base = list;
+            } else {
+                const [obj, prop] = util.walkObject(
                     list,
                     start.replace(/^\/|\/$/g, '').replace(/\//g, '.')
                 );
+
+                base = obj[prop];
+            }
 
             if (base) {
                 const entries = [];
@@ -139,29 +148,57 @@ const file = {
         })
         .catch(logError),
 
+//    mv: start =>
+//        jcrypt.decryptFile(treeFile)
+//        .then(data => {
+//            let list = JSON.parse(data);
+//
+//            const base = !start ?
+//                list :
+//                util.walkObject(
+//                    list,
+//                    start.replace(/^\/|\/$/g, '').replace(/\//g, '.')
+//                );
+//
+//            if (base) {
+//                const entries = [];
+//
+//                for (let entry of Object.keys(base)) {
+//                    // Here all we're doing is adding a trailing '/' if the entry is a dir.
+//                    entries.push(
+//                        (typeof base[entry] === 'object') ?
+//                            `${entry}/` :
+//                            entry
+//                    );
+//                }
+//
+//                logInfo(
+//                    entries.length ?
+//                        `Installed files: \n${entries.join('\n')}` :
+//                        'No files'
+//                );
+//            } else {
+//                logError('There was a TypeError attempting to parse the tree object. Bad object lookup?');
+//            }
+//        })
+//        .catch(logError),
+
     rm: (() => {
-        function rm(file) {
-            return new Promise((resolve, reject) =>
-                which('shred', err => {
-                    let rm;
+        const removeKey = key =>
+            new Promise((resolve, reject) =>
+                jcrypt.decryptFile(treeFile)
+                .then(data => {
+                    const list = JSON.parse(data);
+                    const [obj, prop] = util.walkObject(list, key.replace(/\//, '.'));
 
-                    if (err) {
-                        logInfo('Your OS doesn\`t have the `shred` utility installed, falling back to `rm`...');
-                        rm = cp.spawn('rm', [file]);
-                    } else {
-                        rm = cp.spawn('shred', ['--zero', '--remove', file]);
-                    }
+                    delete obj[prop];
 
-                    rm.on('close', code => {
-                        if (code !== 0) {
-                            reject('Something terrible happened!');
-                        } else {
-                            resolve('The file has been removed');
-                        }
-                    });
+                    jcrypt.encrypt(util.getGPGArgs(), JSON.stringify(list, null, 4))
+                    .then(util.writeFile(util.getDefaultFileOptions(), treeFile));
                 })
+                .then(() => resolve('Key removed successfully'))
+                .catch(reject)
             );
-        }
 
         return key => {
             const hashedFilename = util.hashFilename(util.stripBeginningSlash(key));
@@ -179,8 +216,10 @@ const file = {
                     ]
                 }], answers => {
                     if (answers.rm) {
-                        rm(path)
-                        .then(logSuccess)
+                        Promise.all([util.removeFile(path), removeKey(key)])
+                        .then(returnValues => {
+                            logSuccess(returnValues[0]);
+                        })
                         .catch(logError);
                     } else {
                         logInfo('No removal');
