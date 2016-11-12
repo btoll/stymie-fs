@@ -32,6 +32,9 @@ const argv = require('yargs')
     .example('stymie rm', 'Deletes a file')
     .command('rm', 'Delete a file')
 
+    .example('stymie rmDir', 'Deletes a directory (only if empty)')
+    .command('rmDir', 'Delete a directory')
+
     .help('h')
     .alias('h', 'help')
     .argv;
@@ -64,6 +67,7 @@ if (command === 'init') {
                 case 'list': file.list(argv._[1]); break;
 
                 case 'rm': file.rm(argv._[1]); break;
+                case 'rmDir': file.rmDir(argv._[1]); break;
 
                 default: util.logError('Bad command');
             }

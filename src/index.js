@@ -228,7 +228,41 @@ const file = {
             )
             .catch(logError);
         };
-    })()
+    })(),
+
+    rmDir: dir => {
+        if (!dir) {
+            logError('Must supply a directory name');
+            return;
+        }
+
+        jcrypt.decryptFile(treeFile)
+        .then(data => {
+            let list = JSON.parse(data);
+
+            const [obj, prop] = util.walkObject(
+                list,
+                dir.replace(/^\/|\/$/g, '').replace(/\//g, '.')
+            );
+
+            if (!obj[prop]) {
+                return 'No such thing';
+            } else {
+                if (!Object.keys(obj[prop]).length) {
+                    delete obj[prop];
+
+                    return jcrypt.encrypt(util.getGPGArgs(), JSON.stringify(list, null, 4))
+                    .then(util.writeFile(util.getDefaultFileOptions(), treeFile))
+                    .then(() => 'Key removed successfully')
+                    .catch(logError);
+                } else {
+                    return `Directory ${prop} is not empty`;
+                }
+            }
+        })
+        .then(logInfo)
+        .catch(logError);
+    }
 };
 
 module.exports = file;

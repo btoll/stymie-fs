@@ -50,6 +50,7 @@ stymie-fs rm secrets
     has | Checks if the file exists
     list | List all files (TODO)
     rm | Deletes a file
+    rmDir | Deletes a directory (only if empty)
 
 ### Other commands and options
 
