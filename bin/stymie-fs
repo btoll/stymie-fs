@@ -29,6 +29,9 @@ const argv = require('yargs')
     .command('list', 'List all files')
     .command('ls', 'Alias of `list`')
 
+    .example('stymie mv', 'Renames a file')
+    .command('mv', 'Rename a file')
+
     .example('stymie rm', 'Deletes a file')
     .command('rm', 'Delete a file')
 
@@ -65,6 +68,8 @@ if (command === 'init') {
 
                 case 'ls':
                 case 'list': file.list(argv._[1]); break;
+
+                case 'mv': file.mv(argv._[1], argv._[2]); break;
 
                 case 'rm': file.rm(argv._[1]); break;
                 case 'rmDir': file.rmDir(argv._[1]); break;

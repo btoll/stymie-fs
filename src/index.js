@@ -2,6 +2,7 @@
 
 const R = require('ramda');
 const cp = require('child_process');
+const fs = require('fs');
 const inquirer = require('inquirer');
 const jcrypt = require('jcrypt');
 const path = require('path');
@@ -148,40 +149,47 @@ const file = {
         })
         .catch(logError),
 
-//    mv: start =>
-//        jcrypt.decryptFile(treeFile)
-//        .then(data => {
-//            let list = JSON.parse(data);
-//
-//            const base = !start ?
-//                list :
-//                util.walkObject(
-//                    list,
-//                    start.replace(/^\/|\/$/g, '').replace(/\//g, '.')
-//                );
-//
-//            if (base) {
-//                const entries = [];
-//
-//                for (let entry of Object.keys(base)) {
-//                    // Here all we're doing is adding a trailing '/' if the entry is a dir.
-//                    entries.push(
-//                        (typeof base[entry] === 'object') ?
-//                            `${entry}/` :
-//                            entry
-//                    );
-//                }
-//
-//                logInfo(
-//                    entries.length ?
-//                        `Installed files: \n${entries.join('\n')}` :
-//                        'No files'
-//                );
-//            } else {
-//                logError('There was a TypeError attempting to parse the tree object. Bad object lookup?');
-//            }
-//        })
-//        .catch(logError),
+    mv: (() => {
+        const rename = (list, src, dest, oldFilename) => {
+            const newFilename = `${filedir}/${util.hashFilename(util.stripBeginningSlash(dest))}`;
+            const [obj, prop] = util.walkObject(list, src.replace(/\//, '.'));
+
+            return new Promise((resolve, reject) =>
+                fs.rename(oldFilename, newFilename, err => {
+                    if (err) {
+                        return 'Error!';
+                    } else {
+                        // Update the keyfile.
+                        delete obj[prop];
+                        obj[dest] = true;
+
+                        return jcrypt.encrypt(util.getGPGArgs(), JSON.stringify(list, null, 4))
+                        .then(util.writeFile(util.getDefaultFileOptions(), treeFile))
+                        .then(() => resolve(`Successfully moved ${src} to ${dest}`))
+                        .catch(reject);
+                    }
+                })
+            );
+        };
+
+        return (src, dest) => {
+            if (!src || !dest) {
+                logError('Must supply both a src name and a dest name');
+                return ;
+            }
+
+            const oldFilename = `${filedir}/${util.hashFilename(util.stripBeginningSlash(src))}`;
+
+            util.fileExists(oldFilename)
+            .then(() =>
+                jcrypt.decryptFile(treeFile)
+                .then(data => rename(JSON.parse(data), src, dest, oldFilename))
+                .catch(logError)
+            )
+            .then(logSuccess)
+            .catch(logError);
+        };
+    })(),
 
     rm: (() => {
         const removeKey = key =>
