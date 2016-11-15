@@ -129,7 +129,8 @@ const file = {
             if (base) {
                 const entries = [];
 
-                for (let entry of Object.keys(base)) {
+                // List in sorted order.
+                for (let entry of Object.keys(base).sort()) {
                     // Here all we're doing is adding a trailing '/' if the entry is a dir.
                     entries.push(
                         (typeof base[entry] === 'object') ?

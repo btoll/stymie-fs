@@ -124,7 +124,7 @@ module.exports = () =>
                 recipient: recipient,
                 sign: sign
             }, null, 4))
-            .then(util.writeFile(util.getDefaultFileOptions(), `${stymieDir}/c`))
+            .then(util.writeFile(defaultFileOptions, `${stymieDir}/c`))
             .catch(logError);
         })
         .then(file => {
