@@ -65,7 +65,9 @@ const util = {
             return;
         }
 
-        return crypto.createHash(gpgOptions.hash).update(file).digest('hex');
+        return crypto.createHash(gpgOptions.hash).update(
+            util.stripBeginningSlash(file)
+        ).digest('hex');
     },
 
     makeListOfDirs: dirname => dirname.replace(/^\/|\/$/g, '').split('/'),

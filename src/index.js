@@ -83,7 +83,7 @@ const file = {
     },
 
     get: key => {
-        const keyPath = `${filedir}/${util.hashFilename(util.stripBeginningSlash(key))}`;
+        const keyPath = `${filedir}/${util.hashFilename(key)}`;
 
         util.fileExists(keyPath).then(() =>
             jcrypt.decryptToFile(keyPath)
@@ -106,7 +106,7 @@ const file = {
             return;
         }
 
-        util.fileExists(`${filedir}/${util.hashFilename(util.stripBeginningSlash(key))}`)
+        util.fileExists(`${filedir}/${util.hashFilename(key)}`)
         .then(() => logSuccess('File exists'))
         .catch(logError);
     },
@@ -119,7 +119,7 @@ const file = {
         }
 
         Promise.all([
-            jcrypt.encryptToFile(src, `${filedir}/${util.hashFilename(util.stripBeginningSlash(src))}`, util.getGPGArgs(), util.getDefaultFileOptions()),
+            jcrypt.encryptToFile(src, `${filedir}/${util.hashFilename(src)}`, util.getGPGArgs(), util.getDefaultFileOptions()),
             (() =>
                 jcrypt.decryptFile(treeFile)
                 .then(data => util.writeKeyToTreeFile(src, JSON.parse(data)))
@@ -174,7 +174,7 @@ const file = {
 
     mv: (() => {
         const rename = (list, src, dest, oldFilename) => {
-            const newFilename = `${filedir}/${util.hashFilename(util.stripBeginningSlash(dest))}`;
+            const newFilename = `${filedir}/${util.hashFilename(dest)}`;
             const [obj, prop] = util.walkObject(list, src.replace(/\//, '.'));
 
             return new Promise((resolve, reject) =>
@@ -201,7 +201,7 @@ const file = {
                 return ;
             }
 
-            const oldFilename = `${filedir}/${util.hashFilename(util.stripBeginningSlash(src))}`;
+            const oldFilename = `${filedir}/${util.hashFilename(src)}`;
 
             util.fileExists(oldFilename)
             .then(() =>
@@ -232,7 +232,7 @@ const file = {
             );
 
         return key => {
-            const hashedFilename = util.hashFilename(util.stripBeginningSlash(key));
+            const hashedFilename = util.hashFilename(key);
             const path = `${filedir}/${hashedFilename}`;
 
             util.fileExists(path)
