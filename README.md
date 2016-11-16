@@ -48,6 +48,7 @@ stymie-fs rm secrets
     edit | Edits a file
     get | Retrieves a file
     has | Checks if the file exists
+    import | Imports a file
     list | List all files (TODO)
     mv | Renames a file
     rm | Deletes a file

@@ -25,6 +25,9 @@ const argv = require('yargs')
     .example('stymie has', 'Checks if the file exists')
     .command('has', 'Check if the file exists')
 
+    .example('stymie import', 'Imports a file')
+    .command('import', 'Import a file')
+
     .example('stymie list', 'Lists all files')
     .command('list', 'List all files')
     .command('ls', 'Alias of `list`')
@@ -65,6 +68,8 @@ if (command === 'init') {
                 case 'get': file.get(argv._[1]); break;
 
                 case 'has': file.has(argv._[1]); break;
+
+                case 'import': file.import(argv._[1], argv._[2]); break;
 
                 case 'ls':
                 case 'list': file.list(argv._[1]); break;

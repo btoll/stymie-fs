@@ -1,3 +1,5 @@
+// TODO: Allow a user to add/edit in one step.
+
 'use strict';
 
 const R = require('ramda');
@@ -106,6 +108,26 @@ const file = {
 
         util.fileExists(`${filedir}/${util.hashFilename(util.stripBeginningSlash(key))}`)
         .then(() => logSuccess('File exists'))
+        .catch(logError);
+    },
+
+//    import: (src, dest) => {
+    import: src => {
+        if (!src) {
+            logError('Must supply a file name');
+            return;
+        }
+
+        Promise.all([
+            jcrypt.encryptToFile(src, `${filedir}/${util.hashFilename(util.stripBeginningSlash(src))}`, util.getGPGArgs(), util.getDefaultFileOptions()),
+            (() =>
+                jcrypt.decryptFile(treeFile)
+                .then(data => util.writeKeyToTreeFile(src, JSON.parse(data)))
+                .then(list => jcrypt.encrypt(util.getGPGArgs(), JSON.stringify(list, null, 4)))
+                .then(util.writeFile(util.getDefaultFileOptions(), treeFile))
+            )()
+        ])
+        .then(logSuccess)
         .catch(logError);
     },
 
