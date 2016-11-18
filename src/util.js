@@ -4,6 +4,7 @@ const R = require('ramda');
 const cp = require('child_process');
 const crypto = require('crypto');
 const fs = require('fs');
+const jcrypt = require('jcrypt');
 const logger = require('logger');
 const path = require('path');
 const which = require('which');
@@ -16,15 +17,19 @@ const defaultWriteOptions = {
     mode: 0o0600
 };
 
-let gpgOptions = {};
+let hash = null;
 
 const util = {
     log: logger.log,
     logError: logger.error,
-    logInfo: logger.logInfo,
+    logInfo: logger.info,
     logRaw: logger.raw,
     logSuccess: logger.success,
     logWarn: logger.warn,
+
+    // Will be defined in #setGPGOptions.
+    encrypt: null,
+    encryptToFile: null,
 
     fileExists: path =>
         new Promise((resolve, reject) =>
@@ -37,35 +42,12 @@ const util = {
             })
         ),
 
-    getGPGArgs: () => {
-        let arr = ['-r', gpgOptions.recipient];
-
-        if (gpgOptions.armor) {
-            arr.push('--armor');
-        }
-
-        if (gpgOptions.sign) {
-            arr.push('--sign');
-        }
-
-        return arr;
-    },
-
-    getDefaultFileOptions: () => {
-        return {
-            flags: 'w',
-            defaultEncoding: 'utf8',
-            fd: null,
-            mode: 0o0600
-        };
-    },
-
     hashFilename: file => {
         if (!file) {
             return;
         }
 
-        return crypto.createHash(gpgOptions.hash).update(
+        return crypto.createHash(hash).update(
             util.stripBeginningSlash(file)
         ).digest('hex');
     },
@@ -95,7 +77,24 @@ const util = {
             })
         ),
 
-    setGPGOptions: data => gpgOptions = JSON.parse(data),
+    setGPGOptions: options => {
+        hash = options.hash;
+
+        const gpgOptions = [
+            '-r', options.recipient
+        ];
+
+        if (options.armor) {
+            gpgOptions.push('--armor');
+        }
+
+        if (options.sign) {
+            gpgOptions.push('--sign');
+        }
+
+        util.encrypt = jcrypt.encrypt(gpgOptions);
+        util.encryptToFile = jcrypt.encryptToFile(gpgOptions);
+    },
 
     stripBeginningSlash: filename => filename.replace(/^\//, ''),
 
@@ -143,10 +142,9 @@ const util = {
 
     writeDirsToTreeFile: R.curry((dirname, list) => util.writeDirs(list, util.makeListOfDirs(dirname))),
 
-    // TODO: (writeOptions = defaultWriteOptions, dest, data)
-    writeFile: R.curry((writeOptions, dest, enciphered) =>
+    writeFile: R.curry((dest, enciphered) =>
         new Promise((resolve, reject) =>
-            fs.writeFile(dest, enciphered, writeOptions || defaultWriteOptions, err => {
+            fs.writeFile(dest, enciphered, defaultWriteOptions, err => {
                 if (err) {
                     reject(err);
                 } else {

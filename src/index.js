@@ -13,9 +13,9 @@ const util = require('./util');
 const env = process.env;
 const stymieDir = `${env.STYMIE_FS || env.HOME}/.stymie_fs.d`;
 const filedir = `${stymieDir}/s`;
-const treeFile = `${stymieDir}/f`;
+const keyFile = `${stymieDir}/f`;
 const logError = util.logError;
-const logInfo = util.log;
+const logInfo = util.logInfo;
 const logSuccess = util.logSuccess;
 
 function openEditor(file, callback) {
@@ -38,18 +38,14 @@ const file = {
         }
 
         const newKey = util.stripBeginningSlash(key);
-
-        const defaultFileOptions = util.getDefaultFileOptions();
-        const gpgArgs = util.getGPGArgs();
         const hashedFilename = util.hashFilename(newKey);
 
-        const writeKeyFile = util.writeFile(defaultFileOptions, `${filedir}/${hashedFilename}`);
-        const writeTreeFile = util.writeFile(defaultFileOptions, treeFile);
+        const writeKeyFile = util.writeFile(`${filedir}/${hashedFilename}`);
+        const writeTreeFile = util.writeFile(keyFile);
 
         const stringifyTreeFile = data => JSON.stringify(data, null, 4);
         const writeDirsToTreeFile = util.writeDirsToTreeFile(newKey);
         const writeKeyToTreeFile = util.writeKeyToTreeFile(newKey);
-        const encryptData = jcrypt.encrypt(gpgArgs);
 
         const foo = fn =>
             R.composeP(
@@ -57,14 +53,14 @@ const file = {
                     writeTreeFile,
                     // Now that the new file has been added we need to record it in the "treefile"
                     // in order to do lookups.
-                    R.compose(encryptData, stringifyTreeFile, fn, JSON.parse),
+                    R.compose(util.encrypt, stringifyTreeFile, fn, JSON.parse),
                     jcrypt.decryptFile
                 )
             );
 
         // Creating an already-existing dir doesn't throw, but maybe clean this up.
         if (/\/$/.test(newKey)) {
-            foo(writeDirsToTreeFile)(treeFile)
+            foo(writeDirsToTreeFile)(keyFile)
             .then(logSuccess);
         } else {
             // This seems counter-intuitive because the resolve and reject operations
@@ -73,9 +69,9 @@ const file = {
             util.fileExists(`${filedir}/${hashedFilename}`)
             .then(() => logError('File already exists'))
             .catch(() =>
-                encryptData(newKey)
+                util.encrypt(newKey)
                 .then(writeKeyFile)
-                .then(() => foo(writeKeyToTreeFile)(treeFile))
+                .then(() => foo(writeKeyToTreeFile)(keyFile))
                 .then(() => logSuccess('File created successfully'))
                 .catch(logError)
             );
@@ -86,15 +82,15 @@ const file = {
         const keyPath = `${filedir}/${util.hashFilename(key)}`;
 
         util.fileExists(keyPath).then(() =>
-            jcrypt.decryptToFile(keyPath)
-            .then(() => {
+            jcrypt.decryptToFile(keyPath, null)
+            .then(() =>
                 openEditor(keyPath, () =>
                     // Re-encrypt once done.
-                    jcrypt.encryptToFile(keyPath, null, util.getGPGArgs(), util.getDefaultFileOptions())
+                    util.encryptToFile(keyPath, null)
                     .then(() => logInfo('Re-encrypting and closing the file'))
                     .catch(logError)
-                );
-            })
+                )
+            )
             .catch(logError)
         )
         .catch(logError);
@@ -119,12 +115,12 @@ const file = {
         }
 
         Promise.all([
-            jcrypt.encryptToFile(src, `${filedir}/${util.hashFilename(src)}`, util.getGPGArgs(), util.getDefaultFileOptions()),
+            util.encryptToFile(src, `${filedir}/${util.hashFilename(src)}`),
             (() =>
-                jcrypt.decryptFile(treeFile)
+                jcrypt.decryptFile(keyFile)
                 .then(data => util.writeKeyToTreeFile(src, JSON.parse(data)))
-                .then(list => jcrypt.encrypt(util.getGPGArgs(), JSON.stringify(list, null, 4)))
-                .then(util.writeFile(util.getDefaultFileOptions(), treeFile))
+                .then(list => util.encrypt(JSON.stringify(list, null, 4)))
+                .then(util.writeFile(keyFile))
             )()
         ])
         .then(logSuccess)
@@ -132,7 +128,7 @@ const file = {
     },
 
     list: start =>
-        jcrypt.decryptFile(treeFile)
+        jcrypt.decryptFile(keyFile)
         .then(data => {
             let base = null;
             let list = JSON.parse(data);
@@ -186,8 +182,8 @@ const file = {
                         delete obj[prop];
                         obj[dest] = true;
 
-                        return jcrypt.encrypt(util.getGPGArgs(), JSON.stringify(list, null, 4))
-                        .then(util.writeFile(util.getDefaultFileOptions(), treeFile))
+                        return util.encrypt(JSON.stringify(list, null, 4))
+                        .then(util.writeFile(keyFile))
                         .then(() => resolve(`Successfully moved ${src} to ${dest}`))
                         .catch(reject);
                     }
@@ -205,7 +201,7 @@ const file = {
 
             util.fileExists(oldFilename)
             .then(() =>
-                jcrypt.decryptFile(treeFile)
+                jcrypt.decryptFile(keyFile)
                 .then(data => rename(JSON.parse(data), src, dest, oldFilename))
                 .catch(logError)
             )
@@ -217,15 +213,15 @@ const file = {
     rm: (() => {
         const removeKey = key =>
             new Promise((resolve, reject) =>
-                jcrypt.decryptFile(treeFile)
+                jcrypt.decryptFile(keyFile)
                 .then(data => {
                     const list = JSON.parse(data);
                     const [obj, prop] = util.walkObject(list, key.replace(/\//, '.'));
 
                     delete obj[prop];
 
-                    jcrypt.encrypt(util.getGPGArgs(), JSON.stringify(list, null, 4))
-                    .then(util.writeFile(util.getDefaultFileOptions(), treeFile));
+                    util.encrypt(JSON.stringify(list, null, 4))
+                    .then(util.writeFile(keyFile));
                 })
                 .then(() => resolve('Key removed successfully'))
                 .catch(reject)
@@ -248,9 +244,7 @@ const file = {
                 }], answers => {
                     if (answers.rm) {
                         Promise.all([util.removeFile(path), removeKey(key)])
-                        .then(returnValues => {
-                            logSuccess(returnValues[0]);
-                        })
+                        .then(returnValues => logSuccess(returnValues[0]))
                         .catch(logError);
                     } else {
                         logInfo('No removal');
@@ -267,7 +261,7 @@ const file = {
             return;
         }
 
-        jcrypt.decryptFile(treeFile)
+        jcrypt.decryptFile(keyFile)
         .then(data => {
             let list = JSON.parse(data);
 
@@ -282,8 +276,8 @@ const file = {
                 if (!Object.keys(obj[prop]).length) {
                     delete obj[prop];
 
-                    return jcrypt.encrypt(util.getGPGArgs(), JSON.stringify(list, null, 4))
-                    .then(util.writeFile(util.getDefaultFileOptions(), treeFile))
+                    return util.encrypt(JSON.stringify(list, null, 4))
+                    .then(util.writeFile(keyFile))
                     .then(() => 'Key removed successfully')
                     .catch(logError);
                 } else {

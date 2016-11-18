@@ -58,8 +58,8 @@ if (command === 'init') {
     util.fileExists(`${stymieDir}/c`)
     .then(configFile =>
         jcrypt.decryptFile(configFile)
-        .then(data => {
-            util.setGPGOptions(data);
+        .then(gpgOptions => {
+            util.setGPGOptions(JSON.parse(gpgOptions));
 
             switch (command) {
                 case 'add': file.add(argv._[1]); break;

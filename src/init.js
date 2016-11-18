@@ -2,10 +2,8 @@
 
 const cp = require('child_process');
 const fs = require('fs');
-const jcrypt = require('jcrypt');
 const util = require('./util');
 
-const defaultFileOptions = util.getDefaultFileOptions();
 const logError = util.logError;
 const logSuccess = util.logSuccess;
 
@@ -75,20 +73,17 @@ module.exports = () =>
         when: answers => answers.histignore
     }], answers => {
         const home = process.env.HOME;
-        const armor = answers.armor;
-        const recipient = answers.recipient;
-        const sign = answers.sign;
-        const gpgOptions = ['--encrypt', '-r', recipient];
         let installDir = answers.installDir;
         let stymieDir;
 
-        if (armor) {
-            gpgOptions.push('--armor');
-        }
+        const gpgOptions = {
+            armor: !!answers.armor,
+            hash: answers.hash,
+            recipient: answers.recipient,
+            sign: !!answers.sign
+        };
 
-        if (sign) {
-            gpgOptions.push('--sign');
-        }
+        util.setGPGOptions(gpgOptions);
 
         if (installDir === '~') {
             installDir = home;
@@ -118,13 +113,8 @@ module.exports = () =>
             logSuccess(`Created encrypted entries directory ${dir}`);
 
             // Create config file.
-            return jcrypt.encrypt(gpgOptions, JSON.stringify({
-                armor: armor,
-                hash: answers.hash,
-                recipient: recipient,
-                sign: sign
-            }, null, 4))
-            .then(util.writeFile(defaultFileOptions, `${stymieDir}/c`))
+            return util.encrypt(JSON.stringify(gpgOptions, null, 4))
+            .then(util.writeFile(`${stymieDir}/c`))
             .catch(logError);
         })
         .then(file => {
@@ -132,8 +122,8 @@ module.exports = () =>
 
             // Create entry list file.
             // TODO: DRY!
-            return jcrypt.encrypt(gpgOptions, JSON.stringify({}, null, 4))
-            .then(util.writeFile(defaultFileOptions, `${stymieDir}/f`))
+            return util.encrypt(JSON.stringify({}, null, 4))
+            .then(util.writeFile(`${stymieDir}/f`))
             .catch(logError);
         })
         .then(file => {
