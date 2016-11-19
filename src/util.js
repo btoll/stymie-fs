@@ -17,6 +17,10 @@ const defaultWriteOptions = {
     mode: 0o0600
 };
 
+const reAnchors = /^\/|\/$/g;
+const reBeginningSlash = /^\//;
+const reSwapChars = /\//g;
+
 let hash = null;
 
 const util = {
@@ -42,6 +46,13 @@ const util = {
             })
         ),
 
+    // Turns strings passed by the CLI into dot notation used by #walkObject for object lookups.
+    //
+    //      `/notes/fp/curry` -> `notes.fp.curry`
+    //
+    getDotNotation: filename =>
+        filename.replace(reAnchors, '').replace(reSwapChars, '.'),
+
     hashFilename: file => {
         if (!file) {
             return;
@@ -52,7 +63,8 @@ const util = {
         ).digest('hex');
     },
 
-    makeListOfDirs: dirname => dirname.replace(/^\/|\/$/g, '').split('/'),
+    makeListOfDirs: dirname =>
+        dirname.replace(reAnchors, '').split('/'),
 
     removeFile: file =>
         new Promise((resolve, reject) =>
@@ -96,13 +108,20 @@ const util = {
         util.encryptToFile = jcrypt.encryptToFile(gpgOptions);
     },
 
-    stripBeginningSlash: filename => filename.replace(/^\//, ''),
+    stripBeginningSlash: filename =>
+        filename.replace(reBeginningSlash, ''),
 
     walkObject: (o, str) => {
         const idx = str.indexOf('.');
 
         if (!~idx) {
-            return !o ? [null, str] : [o, str];
+//            return !o ? [null, str] : [o, str];
+            return [
+                (!o || !o[str]) ?
+                    null :
+                    o,
+                str
+            ];
         }
 
         // If fn is called with foo object and 'bar.baz.quux', recurse, i.e.:

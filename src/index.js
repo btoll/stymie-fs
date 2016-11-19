@@ -102,11 +102,22 @@ const file = {
             return;
         }
 
-        util.fileExists(`${filedir}/${util.hashFilename(key)}`)
-        .then(() => logSuccess('File exists'))
+//        util.fileExists(`${filedir}/${util.hashFilename(key)}`)
+        jcrypt.decryptFile(keyFile)
+        .then(data => {
+            let list = JSON.parse(data);
+
+            const [obj] = util.walkObject(list, util.getDotNotation(key));
+            if (obj) {
+                logSuccess('File exists');
+            } else {
+                logError('No file');
+            }
+        })
         .catch(logError);
     },
 
+    // TODO
 //    import: (src, dest) => {
     import: src => {
         if (!src) {
@@ -138,7 +149,7 @@ const file = {
             } else {
                 const [obj, prop] = util.walkObject(
                     list,
-                    start.replace(/^\/|\/$/g, '').replace(/\//g, '.')
+                    util.getDotNotation(start)
                 );
 
                 base = obj[prop];
@@ -198,11 +209,15 @@ const file = {
             }
 
             const oldFilename = `${filedir}/${util.hashFilename(src)}`;
+            const parseAndRename = R.compose(
+                rename(src, dest, oldFilename),
+                JSON.parse
+            );
 
             util.fileExists(oldFilename)
             .then(() =>
                 jcrypt.decryptFile(keyFile)
-                .then(data => rename(JSON.parse(data), src, dest, oldFilename))
+                .then(parseAndRename)
                 .catch(logError)
             )
             .then(logSuccess)
@@ -216,7 +231,7 @@ const file = {
                 jcrypt.decryptFile(keyFile)
                 .then(data => {
                     const list = JSON.parse(data);
-                    const [obj, prop] = util.walkObject(list, key.replace(/\//, '.'));
+                    const [obj, prop] = util.walkObject(list, util.getDotNotation(key));
 
                     delete obj[prop];
 
