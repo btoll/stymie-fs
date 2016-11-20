@@ -102,16 +102,13 @@ const file = {
             return;
         }
 
-//        util.fileExists(`${filedir}/${util.hashFilename(key)}`)
-        jcrypt.decryptFile(keyFile)
-        .then(data => {
-            let list = JSON.parse(data);
-
+        util.getKeyList()
+        .then(list => {
             const [obj] = util.walkObject(list, util.getDotNotation(key));
             if (obj) {
-                logSuccess('File exists');
+                logInfo('File exists');
             } else {
-                logError('No file');
+                logInfo('Nothing to do!');
             }
         })
         .catch(logError);
@@ -128,8 +125,8 @@ const file = {
         Promise.all([
             util.encryptToFile(src, `${filedir}/${util.hashFilename(src)}`),
             (() =>
-                jcrypt.decryptFile(keyFile)
-                .then(data => util.writeKeyToTreeFile(src, JSON.parse(data)))
+                util.getKeyList()
+                .then(util.writeKeyToTreeFile(src))
                 .then(list => util.encrypt(JSON.stringify(list, null, 4)))
                 .then(util.writeFile(keyFile))
             )()
@@ -139,10 +136,9 @@ const file = {
     },
 
     list: start =>
-        jcrypt.decryptFile(keyFile)
-        .then(data => {
+        util.getKeyList()
+        .then(list => {
             let base = null;
-            let list = JSON.parse(data);
 
             if (!start) {
                 base = list;
@@ -209,15 +205,10 @@ const file = {
             }
 
             const oldFilename = `${filedir}/${util.hashFilename(src)}`;
-            const parseAndRename = R.compose(
-                rename(src, dest, oldFilename),
-                JSON.parse
-            );
-
             util.fileExists(oldFilename)
             .then(() =>
-                jcrypt.decryptFile(keyFile)
-                .then(parseAndRename)
+                util.getKeyList()
+                .then(rename(src, dest, oldFilename))
                 .catch(logError)
             )
             .then(logSuccess)
@@ -226,10 +217,8 @@ const file = {
     })(),
 
     rm: key => {
-        jcrypt.decryptFile(keyFile)
-        .then(data => {
-            const list = JSON.parse(data);
-
+        util.getKeyList()
+        .then(list => {
             const [obj, prop] = util.walkObject(list, util.getDotNotation(key));
 
             if (obj) {
@@ -280,10 +269,8 @@ const file = {
             return;
         }
 
-        jcrypt.decryptFile(keyFile)
-        .then(data => {
-            let list = JSON.parse(data);
-
+        util.getKeyList()
+        .then(list => {
             const [obj, prop] = util.walkObject(
                 list,
                 dir.replace(/^\/|\/$/g, '').replace(/\//g, '.')

@@ -17,6 +17,9 @@ const defaultWriteOptions = {
     mode: 0o0600
 };
 
+const env = process.env;
+const stymieDir = `${env.STYMIE_FS || env.HOME}/.stymie_fs.d`;
+const keyFile = `${stymieDir}/f`;
 const reAnchors = /^\/|\/$/g;
 const reBeginningSlash = /^\//;
 const reSwapChars = /\//g;
@@ -52,6 +55,10 @@ const util = {
     //
     getDotNotation: filename =>
         filename.replace(reAnchors, '').replace(reSwapChars, '.'),
+
+    getKeyList: () =>
+        jcrypt.decryptFile(keyFile)
+        .then(JSON.parse),
 
     hashFilename: file => {
         if (!file) {
@@ -124,7 +131,6 @@ const util = {
         const idx = str.indexOf('.');
 
         if (!~idx) {
-//            return !o ? [null, str] : [o, str];
             return [
                 (!o || !o[str]) ?
                     null :
