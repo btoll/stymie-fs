@@ -225,50 +225,54 @@ const file = {
         };
     })(),
 
-    rm: (() => {
-        const removeKey = key =>
-            new Promise((resolve, reject) =>
-                jcrypt.decryptFile(keyFile)
-                .then(data => {
-                    const list = JSON.parse(data);
-                    const [obj, prop] = util.walkObject(list, util.getDotNotation(key));
+    rm: key => {
+        jcrypt.decryptFile(keyFile)
+        .then(data => {
+            const list = JSON.parse(data);
 
-                    delete obj[prop];
+            const [obj, prop] = util.walkObject(list, util.getDotNotation(key));
 
-                    util.encrypt(JSON.stringify(list, null, 4))
-                    .then(util.writeFile(keyFile));
-                })
-                .then(() => resolve('Key removed successfully'))
-                .catch(reject)
-            );
+            if (obj) {
+                const f = obj[prop];
 
-        return key => {
-            const hashedFilename = util.hashFilename(key);
-            const path = `${filedir}/${hashedFilename}`;
+                if (util.isFile(f) || util.isEmpty(f)) {
+                    inquirer.prompt([{
+                        type: 'list',
+                        name: 'rm',
+                        message: 'Are you sure?',
+                        choices: [
+                            {name: 'Yes', value: true},
+                            {name: 'No', value: false}
+                        ]
+                    }], answers => {
+                        if (answers.rm) {
+                            delete obj[prop];
 
-            util.fileExists(path)
-            .then(() =>
-                inquirer.prompt([{
-                    type: 'list',
-                    name: 'rm',
-                    message: 'Are you sure?',
-                    choices: [
-                        {name: 'Yes', value: true},
-                        {name: 'No', value: false}
-                    ]
-                }], answers => {
-                    if (answers.rm) {
-                        Promise.all([util.removeFile(path), removeKey(key)])
-                        .then(returnValues => logSuccess(returnValues[0]))
-                        .catch(logError);
-                    } else {
-                        logInfo('No removal');
-                    }
-                })
-            )
-            .catch(logError);
-        };
-    })(),
+                            util.encrypt(JSON.stringify(list, null, 4))
+                            .then(util.writeFile(keyFile))
+                            .then(() => {
+                                logSuccess('Key removed successfully');
+
+                                const hashedFilename = util.hashFilename(key);
+
+                                if (util.isFile(f)) {
+                                    util.removeFile(`${filedir}/${hashedFilename}`);
+                                }
+                            })
+                            .catch(logError);
+                        } else {
+                            logInfo('No removal');
+                        }
+                    });
+                } else {
+                    util.logWarn(`No removal, \`${key}\` is a (non-empty) directory`);
+                }
+            } else {
+                logInfo('Nothing to do!');
+            }
+        })
+        .catch(logError);
+    },
 
     rmDir: dir => {
         if (!dir) {

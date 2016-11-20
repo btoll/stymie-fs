@@ -63,17 +63,25 @@ const util = {
         ).digest('hex');
     },
 
+    // Note: "directories" are objects in the keyfile.
+    isDir: f => f !== true,
+
+    isEmpty: f => util.isDir(f) && !Object.keys(f).length,
+
+    // Note: "files" are object properties with a value of true.
+    isFile: f => f === true,
+
     makeListOfDirs: dirname =>
         dirname.replace(reAnchors, '').split('/'),
 
-    removeFile: file =>
+    removeFile: file => {
         new Promise((resolve, reject) =>
             which('shred', err => {
                 let isNotFound = err && err.message && ~err.message.toLowerCase().indexOf('not found');
                 let rm;
 
                 if (isNotFound) {
-                    util.log('Your OS doesn\`t have the `shred` utility installed, falling back to `rm`...');
+                    util.logInfo('Your OS doesn\`t have the `shred` utility installed, falling back to `rm`...');
                     rm = cp.spawn('rm', [file]);
                 } else {
                     rm = cp.spawn('shred', ['--zero', '--remove', file]);
@@ -81,13 +89,14 @@ const util = {
 
                 rm.on('close', code => {
                     if (code !== 0) {
-                        reject('Something terrible happened!');
+                        reject(`Something terrible happened! Error code: ${code}`);
                     } else {
                         resolve('File removed successfully');
                     }
                 });
             })
-        ),
+        );
+    },
 
     setGPGOptions: options => {
         hash = options.hash;
