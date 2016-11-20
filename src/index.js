@@ -44,7 +44,7 @@ const file = {
         const writeTreeFile = util.writeFile(keyFile);
 
         const stringifyTreeFile = data => JSON.stringify(data, null, 4);
-        const writeDirsToTreeFile = util.writeDirsToTreeFile(newKey);
+        const writeDirsToKeyList = util.writeDirsToKeyList(newKey);
         const writeKeyToTreeFile = util.writeKeyToTreeFile(newKey);
 
         const foo = fn =>
@@ -60,7 +60,7 @@ const file = {
 
         // Creating an already-existing dir doesn't throw, but maybe clean this up.
         if (/\/$/.test(newKey)) {
-            foo(writeDirsToTreeFile)(keyFile)
+            foo(writeDirsToKeyList)(keyFile)
             .then(logSuccess);
         } else {
             // This seems counter-intuitive because the resolve and reject operations

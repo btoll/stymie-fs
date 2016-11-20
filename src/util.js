@@ -34,6 +34,20 @@ const util = {
     logSuccess: logger.success,
     logWarn: logger.warn,
 
+    createDirEntries: (list, it) => {
+        let l = list;
+
+        for (let dir of it) {
+            if (!l[dir]) {
+                l[dir] = {};
+            }
+
+            l = l[dir];
+        }
+
+        return list;
+    },
+
     // Will be defined in #setGPGOptions.
     encrypt: null,
     encryptToFile: null,
@@ -78,10 +92,10 @@ const util = {
     // Note: "files" are object properties with a value of true.
     isFile: f => f === true,
 
-    makeListOfDirs: dirname =>
-        dirname.replace(reAnchors, '').split('/'),
+    makeArrayOfDirs: key =>
+        key.replace(reAnchors, '').split('/'),
 
-    removeFile: file => {
+    removeFile: file =>
         new Promise((resolve, reject) =>
             which('shred', err => {
                 let isNotFound = err && err.message && ~err.message.toLowerCase().indexOf('not found');
@@ -102,8 +116,7 @@ const util = {
                     }
                 });
             })
-        );
-    },
+        ),
 
     setGPGOptions: options => {
         hash = options.hash;
@@ -160,21 +173,7 @@ const util = {
         return util.walkObject(o[str.slice(0, idx)], str.slice(idx + 1));
     },
 
-    writeDirs: (list, it) => {
-        let l = list;
-
-        for (let dir of it) {
-            if (!l[dir]) {
-                l[dir] = {};
-            }
-
-            l = l[dir];
-        }
-
-        return list;
-    },
-
-    writeDirsToTreeFile: R.curry((dirname, list) => util.writeDirs(list, util.makeListOfDirs(dirname))),
+    writeDirsToKeyList: R.curry((key, list) => util.createDirEntries(list, util.makeArrayOfDirs(key))),
 
     writeFile: R.curry((dest, enciphered) =>
         new Promise((resolve, reject) =>
@@ -188,20 +187,16 @@ const util = {
         )),
 
     writeKeyToTreeFile: R.curry((key, list) => {
-        const dirname = path.dirname(key);
-//        const hashedFilename = util.hashFilename(path.basename(key));
-
-        if (dirname !== '.') {
-            util.writeDirsToTreeFile(dirname, list);
+        if (~key.indexOf('/')) {
+            const dirname = path.dirname(key);
+            util.writeDirsToKeyList(dirname, list);
 
             // Now write the file into the last object.
-            util.makeListOfDirs(dirname).reduce(
+            util.makeArrayOfDirs(dirname).reduce(
                 (acc, curr) => (acc = acc[curr], acc), list
-//            )[hashedFilename] = path.basename(key);
             )[path.basename(key)] = true;
         } else {
-//            list[hashedFilename] = path.basename(key);
-            list[path.basename(key)] = true;
+            list[key] = true;
         }
 
         return list;
