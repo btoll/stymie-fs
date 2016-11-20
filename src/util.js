@@ -24,6 +24,17 @@ const reAnchors = /^\/|\/$/g;
 const reBeginningSlash = /^\//;
 const reSwapChars = /\//g;
 
+const writeFile = R.curry((dest, enciphered) =>
+    new Promise((resolve, reject) =>
+        fs.writeFile(dest, enciphered, defaultWriteOptions, err => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(dest);
+            }
+        })
+    ));
+
 let hash = null;
 
 const util = {
@@ -137,6 +148,9 @@ const util = {
         util.encryptToFile = jcrypt.encryptToFile(gpgOptions);
     },
 
+    stringifyKeyFile: list =>
+        JSON.stringify(list, null, 4),
+
     stripBeginningSlash: filename =>
         filename.replace(reBeginningSlash, ''),
 
@@ -175,16 +189,26 @@ const util = {
 
     writeDirsToKeyList: R.curry((key, list) => util.createDirEntries(list, util.makeArrayOfDirs(key))),
 
-    writeFile: R.curry((dest, enciphered) =>
-        new Promise((resolve, reject) =>
-            fs.writeFile(dest, enciphered, defaultWriteOptions, err => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(dest);
-                }
-            })
-        )),
+    writeFile: writeFile,
+
+    encryptAndWrite: () =>
+        R.compose(
+            R.composeP(util.writeKeyFile, util.encrypt),
+            util.stringifyKeyFile
+        ),
+
+    writeKeyFile: writeFile(keyFile),
+
+//    writeFile: R.curry((dest, enciphered) =>
+//        new Promise((resolve, reject) =>
+//            fs.writeFile(dest, enciphered, defaultWriteOptions, err => {
+//                if (err) {
+//                    reject(err);
+//                } else {
+//                    resolve(dest);
+//                }
+//            })
+//        )),
 
     writeKeyToTreeFile: R.curry((key, list) => {
         if (~key.indexOf('/')) {

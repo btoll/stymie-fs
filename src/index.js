@@ -41,21 +41,17 @@ const file = {
         const hashedFilename = util.hashFilename(newKey);
 
         const writeKeyFile = util.writeFile(`${filedir}/${hashedFilename}`);
-        const writeTreeFile = util.writeFile(keyFile);
-
-        const stringifyTreeFile = data => JSON.stringify(data, null, 4);
         const writeDirsToKeyList = util.writeDirsToKeyList(newKey);
         const writeKeyToTreeFile = util.writeKeyToTreeFile(newKey);
 
-        const foo = fn =>
+        const encryptAndWrite = util.encryptAndWrite();
+
+        const foo = writeOperation =>
             R.composeP(
-                R.composeP(
-                    writeTreeFile,
-                    // Now that the new file has been added we need to record it in the "treefile"
-                    // in order to do lookups.
-                    R.compose(util.encrypt, stringifyTreeFile, fn, JSON.parse),
-                    jcrypt.decryptFile
-                )
+                // Now that the new file has been added we need to record it in the "treefile"
+                // in order to do lookups.
+                R.compose(encryptAndWrite, writeOperation),
+                util.getKeyList
             );
 
         // Creating an already-existing dir doesn't throw, but maybe clean this up.
@@ -127,8 +123,9 @@ const file = {
             (() =>
                 util.getKeyList()
                 .then(util.writeKeyToTreeFile(src))
-                .then(list => util.encrypt(JSON.stringify(list, null, 4)))
-                .then(util.writeFile(keyFile))
+//                .then(list => util.encrypt(util.stringifyKeyFile(list)))
+//                .then(util.writeFile(keyFile))
+                .then(util.encryptAndWrite())
             )()
         ])
         .then(logSuccess)
@@ -237,8 +234,9 @@ const file = {
                         if (answers.rm) {
                             delete obj[prop];
 
-                            util.encrypt(JSON.stringify(list, null, 4))
-                            .then(util.writeFile(keyFile))
+//                            util.encrypt(util.stringifyKeyFile(list))
+//                            .then(util.writeFile(keyFile))
+                            util.encryptAndWrite()(list)
                             .then(() => {
                                 logSuccess('Key removed successfully');
 
@@ -276,14 +274,13 @@ const file = {
                 dir.replace(/^\/|\/$/g, '').replace(/\//g, '.')
             );
 
-            if (!obj[prop]) {
+            if (!obj || !obj[prop]) {
                 return 'No such thing';
             } else {
                 if (!Object.keys(obj[prop]).length) {
                     delete obj[prop];
 
-                    return util.encrypt(JSON.stringify(list, null, 4))
-                    .then(util.writeFile(keyFile))
+                    return util.encryptAndWrite()(list)
                     .then(() => 'Key removed successfully')
                     .catch(logError);
                 } else {
