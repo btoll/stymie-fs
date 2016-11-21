@@ -196,7 +196,7 @@ const writeFile = R.curry((dest, enciphered) =>
 const writeConfigFile = writeFile(configFile);
 const writeKeyFile = writeFile(keyFile);
 
-const writeKeyToTreeFile = R.curry((key, list) => {
+const writeKeyToList = R.curry((key, list) => {
     if (~key.indexOf('/')) {
         const dirname = path.dirname(key);
         writeDirsToKeyList(dirname, list);
@@ -241,7 +241,7 @@ const util = {
     writeConfigFile,
     writeFile,
     writeKeyFile,
-    writeKeyToTreeFile
+    writeKeyToList
 };
 
 module.exports = util;

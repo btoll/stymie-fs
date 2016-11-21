@@ -39,33 +39,36 @@ const file = {
 
         const newKey = util.stripBeginningSlash(key);
         const hashedFilename = util.hashFilename(newKey);
+        const writeKeyToFS = util.writeFile(`${filedir}/${hashedFilename}`);
+        const writeNewKeyToList = util.writeKeyToList(newKey);
+        const writeNewKeyDirs = util.writeDirsToKeyList(newKey);
 
-        const writeKeyFile = util.writeFile(`${filedir}/${hashedFilename}`);
-        const writeDirsToKeyList = util.writeDirsToKeyList(newKey);
-        const writeKeyToTreeFile = util.writeKeyToTreeFile(newKey);
+        const writeDirsToKeyList = R.composeP(
+            R.compose(util.encryptAndWriteKeyFile, writeNewKeyDirs),
+            util.getKeyList
+        );
 
-        const foo = writeOperation =>
-            R.composeP(
-                // Now that the new file has been added we need to record it in the "keyfile"
-                // in order to do lookups.
-                R.compose(util.encryptAndWriteKeyFile, writeOperation),
-                util.getKeyList
-            );
+        // Steps:
+        //      1. Encrypt the new key name and write it to the filesystem.
+        //      2. Open the key list and return the parsed JSON.
+        //      3. Write the new keys to the key list, encrypt it and write it to the keyfile.
+        const writeKeyToList = R.composeP(
+            R.compose(util.encryptAndWriteKeyFile, writeNewKeyToList),
+            util.getKeyList,
+            R.composeP(writeKeyToFS, util.encrypt)
+        );
 
         // Creating an already-existing dir doesn't throw, but maybe clean this up.
         if (/\/$/.test(newKey)) {
-            foo(writeDirsToKeyList)(keyFile)
-            .then(logSuccess);
+            writeDirsToKeyList()
+            .then(() => logSuccess('Operation successful'));
         } else {
-            // This seems counter-intuitive because the resolve and reject operations
-            // are reversed, but this is b/c the success case is when the file does not
-            // exist (and thus will throw an exception).
+            // This seems counter-intuitive because the resolve and reject operations are reversed, but this is b/c
+            // the success case is when the file does not exist (and thus will throw an exception).
             util.fileExists(`${filedir}/${hashedFilename}`)
             .then(() => logError('File already exists'))
             .catch(() =>
-                util.encrypt(newKey)
-                .then(writeKeyFile)
-                .then(() => foo(writeKeyToTreeFile)(keyFile))
+                writeKeyToList(newKey)
                 .then(() => logSuccess('File created successfully'))
                 .catch(logError)
             );
@@ -99,6 +102,7 @@ const file = {
         util.getKeyList()
         .then(list => {
             const [obj] = util.walkObject(list, util.getDotNotation(key));
+
             if (obj) {
                 logInfo('File exists');
             } else {
@@ -120,9 +124,7 @@ const file = {
             util.encryptToFile(src, `${filedir}/${util.hashFilename(src)}`),
             (() =>
                 util.getKeyList()
-                .then(util.writeKeyToTreeFile(src))
-//                .then(list => util.encrypt(util.stringifyKeyFile(list)))
-//                .then(util.writeFile(keyFile))
+                .then(util.writeKeyToList(src))
                 .then(util.encryptAndWriteKeyFile())
             )()
         ])
@@ -211,7 +213,7 @@ const file = {
         };
     })(),
 
-    rm: key => {
+    rm: key =>
         util.getKeyList()
         .then(list => {
             const [obj, prop] = util.walkObject(list, util.getDotNotation(key));
@@ -254,8 +256,7 @@ const file = {
                 logInfo('Nothing to do!');
             }
         })
-        .catch(logError);
-    },
+        .catch(logError),
 
     rmDir: dir => {
         if (!dir) {
