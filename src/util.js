@@ -127,7 +127,7 @@ const setGPGOptions = options => {
     hash = options.hash;
 
     const gpgOptions = [
-        '-r', options.recipient
+        '--hidden-recipient', options.recipient
     ];
 
     if (options.armor) {
