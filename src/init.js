@@ -113,17 +113,14 @@ module.exports = () =>
             logSuccess(`Created encrypted entries directory ${dir}`);
 
             // Create config file.
-            return util.encrypt(JSON.stringify(gpgOptions, null, 4))
-            .then(util.writeFile(`${stymieDir}/c`))
+            return util.encryptAndWriteConfigFile(gpgOptions)
             .catch(logError);
         })
         .then(file => {
             logSuccess(`Created encrypted config file ${file}`);
 
             // Create entry list file.
-            // TODO: DRY!
-            return util.encrypt(JSON.stringify({}, null, 4))
-            .then(util.writeFile(`${stymieDir}/f`))
+            return util.encryptAndWriteKeyFile({})
             .catch(logError);
         })
         .then(file => {

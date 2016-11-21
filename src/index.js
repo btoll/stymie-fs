@@ -46,9 +46,9 @@ const file = {
 
         const foo = writeOperation =>
             R.composeP(
-                // Now that the new file has been added we need to record it in the "treefile"
+                // Now that the new file has been added we need to record it in the "keyfile"
                 // in order to do lookups.
-                R.compose(util.encryptAndWrite, writeOperation),
+                R.compose(util.encryptAndWriteKeyFile, writeOperation),
                 util.getKeyList
             );
 
@@ -123,7 +123,7 @@ const file = {
                 .then(util.writeKeyToTreeFile(src))
 //                .then(list => util.encrypt(util.stringifyKeyFile(list)))
 //                .then(util.writeFile(keyFile))
-                .then(util.encryptAndWrite())
+                .then(util.encryptAndWriteKeyFile())
             )()
         ])
         .then(logSuccess)
@@ -232,7 +232,7 @@ const file = {
                         if (answers.rm) {
                             delete obj[prop];
 
-                            util.encryptAndWrite(list)
+                            util.encryptAndWriteKeyFile(list)
                             .then(() => {
                                 logSuccess('Key removed successfully');
 
@@ -276,7 +276,7 @@ const file = {
                 if (!Object.keys(obj[prop]).length) {
                     delete obj[prop];
 
-                    return util.encryptAndWrite(list)
+                    return util.encryptAndWriteKeyFile(list)
                     .then(() => 'Key removed successfully')
                     .catch(logError);
                 } else {

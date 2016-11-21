@@ -21,6 +21,7 @@ const defaultWriteOptions = {
 
 const env = process.env;
 const stymieDir = `${env.STYMIE_FS || env.HOME}/.stymie_fs.d`;
+const configFile = `${stymieDir}/c`;
 const keyFile = `${stymieDir}/f`;
 const reAnchors = /^\/|\/$/g;
 const reBeginningSlash = /^\//;
@@ -106,6 +107,22 @@ const removeFile = file =>
         })
     );
 
+const setFP = gpgOptions => {
+    // Curry.
+    util.encrypt = jcrypt.encrypt(gpgOptions);
+    util.encryptToFile = jcrypt.encryptToFile(gpgOptions);
+
+    util.encryptAndWriteConfigFile = R.compose(
+        R.composeP(writeConfigFile, util.encrypt),
+        stringifyKeyFile
+    );
+
+    util.encryptAndWriteKeyFile = R.compose(
+        R.composeP(writeKeyFile, util.encrypt),
+        stringifyKeyFile
+    );
+};
+
 const setGPGOptions = options => {
     hash = options.hash;
 
@@ -121,13 +138,7 @@ const setGPGOptions = options => {
         gpgOptions.push('--sign');
     }
 
-    // TODO
-    util.encrypt = jcrypt.encrypt(gpgOptions);
-    util.encryptToFile = jcrypt.encryptToFile(gpgOptions);
-    util.encryptAndWrite = R.compose(
-        R.composeP(writeKeyFile, util.encrypt),
-        stringifyKeyFile
-    );
+    setFP(gpgOptions);
 };
 
 const stringifyKeyFile = list =>
@@ -182,6 +193,7 @@ const writeFile = R.curry((dest, enciphered) =>
         })
     ));
 
+const writeConfigFile = writeFile(configFile);
 const writeKeyFile = writeFile(keyFile);
 
 const writeKeyToTreeFile = R.curry((key, list) => {
@@ -211,7 +223,8 @@ const util = {
     // Will be defined in #setGPGOptions.
     encrypt: null,
     encryptToFile: null,
-    encryptAndWrite: null,
+    encryptAndWriteConfigFile: null,
+    encryptAndWriteKeyFile: null,
 
     fileExists,
     getDotNotation,
@@ -225,6 +238,7 @@ const util = {
     stripBeginningSlash,
     walkObject,
     writeDirsToKeyList,
+    writeConfigFile,
     writeFile,
     writeKeyFile,
     writeKeyToTreeFile
