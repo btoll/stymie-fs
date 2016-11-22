@@ -173,9 +173,34 @@ const file = {
         .catch(logError),
 
     mv: (() => {
-        const rename = (list, src, dest, oldFilename) => {
-            const newFilename = `${filedir}/${util.hashFilename(dest)}`;
-            const [obj, prop] = util.walkObject(list, src.replace(/\//, '.'));
+        const rename = R.curry((src, dest, oldFilename, list) => {
+            const strippedSrc = util.stripAnchorSlashes(src);
+            const strippedDest = util.stripAnchorSlashes(dest);
+
+            const [srcOwner, srcProp, srcObj] = util.walkObject(list, strippedSrc.replace(/\//g, '.'));
+            const [destOwner, destProp, destObj] = util.walkObject(list, strippedDest.replace(/\//g, '.'));
+            const isDir = util.isDir(destObj);
+
+            let newFilename;
+
+//            console.log('srcOwner', srcOwner);
+//            console.log('srcProp', srcProp);
+//            console.log('srcObj', srcObj);
+//
+//            console.log('destOwner', destOwner);
+//            console.log('destProp', destProp);
+//            console.log('destObj', destObj);
+
+            if (isDir) {
+                const tmpName = `${strippedDest}/${srcProp}`;
+                newFilename = `${filedir}/${util.hashFilename(tmpName)}`;
+
+            } else if (!~dest.slice(1).indexOf('/')) {
+                // If no slash (/) occurs in the string or if the only presence of a slash is the first char then GO.
+                newFilename = `${filedir}/${util.hashFilename(destProp)}`;
+            } else {
+                return 'Nothing to do!';
+            }
 
             return new Promise((resolve, reject) =>
                 fs.rename(oldFilename, newFilename, err => {
@@ -183,17 +208,21 @@ const file = {
                         return 'Error!';
                     } else {
                         // Update the keyfile.
-                        delete obj[prop];
-                        obj[dest] = true;
+                        delete srcOwner[srcProp];
 
-                        return util.encrypt(JSON.stringify(list, null, 4))
-                        .then(util.writeFile(keyFile))
+                        if (isDir) {
+                            destObj[srcProp] = true;
+                        } else {
+                            list[destProp] = true;
+                        }
+
+                        return util.encryptAndWriteKeyFile(list)
                         .then(() => resolve(`Successfully moved ${src} to ${dest}`))
                         .catch(reject);
                     }
                 })
             );
-        };
+        });
 
         return (src, dest) => {
             if (!src || !dest) {
@@ -208,7 +237,7 @@ const file = {
                 .then(rename(src, dest, oldFilename))
                 .catch(logError)
             )
-            .then(logSuccess)
+            .then(logInfo)
             .catch(logError);
         };
     })(),

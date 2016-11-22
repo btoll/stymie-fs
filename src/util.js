@@ -74,7 +74,7 @@ const hashFilename = file => {
 };
 
 // Note: "directories" are objects in the keyfile.
-const isDir = f => f !== true;
+const isDir = f => f && f !== true;
 
 const isEmpty = f => isDir(f) && !Object.keys(f).length;
 
@@ -144,6 +144,9 @@ const setGPGOptions = options => {
 const stringifyKeyFile = list =>
     JSON.stringify(list, null, 4);
 
+const stripAnchorSlashes = filename =>
+    filename.replace(reAnchors, '');
+
 const stripBeginningSlash = filename =>
     filename.replace(reBeginningSlash, '');
 
@@ -151,11 +154,16 @@ const walkObject = (o, str) => {
     const idx = str.indexOf('.');
 
     if (!~idx) {
+        const notFound = (!o || !o[str]);
+
         return [
-            (!o || !o[str]) ?
+            notFound ?
                 null :
                 o,
-            str
+            str,
+            notFound ?
+                null :
+                o[str]
         ];
     }
 
@@ -230,11 +238,13 @@ const util = {
     getDotNotation,
     getKeyList,
     hashFilename,
+    isDir,
     isEmpty,
     isFile,
     removeFile,
     setGPGOptions,
     stringifyKeyFile,
+    stripAnchorSlashes,
     stripBeginningSlash,
     walkObject,
     writeDirsToKeyList,
