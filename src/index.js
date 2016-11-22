@@ -13,7 +13,6 @@ const util = require('./util');
 const env = process.env;
 const stymieDir = `${env.STYMIE_FS || env.HOME}/.stymie_fs.d`;
 const filedir = `${stymieDir}/s`;
-const keyFile = `${stymieDir}/f`;
 const logError = util.logError;
 const logInfo = util.logInfo;
 const logSuccess = util.logSuccess;
@@ -117,24 +116,39 @@ const file = {
         .catch(logError);
     },
 
-    // TODO
-//    import: (src, dest) => {
-    import: src => {
+    import: (src, dest) => {
         if (!src) {
             logError('Must supply a file name');
             return;
         }
 
-        Promise.all([
-            util.encryptToFile(src, `${filedir}/${util.hashFilename(src)}`),
-            (() =>
-                util.getKeyList()
-                .then(util.writeKeyToList(src))
-                .then(util.encryptAndWriteKeyFile())
-            )()
-        ])
-        .then(logSuccess)
+        util.fileExists(src)
+        .then(util.getKeyList)
+        .then(util.walkObject(util.getDotNotation(dest)))
+        .then(walkedObject => {
+            const [, , value] = walkedObject;
+
+            if (value !== null) {
+                const key = `${util.stripAnchorSlashes(dest)}/${path.basename(src)}`;
+
+                return Promise.all([
+                    util.encryptToFile(src, `${filedir}/${util.hashFilename(key)}`),
+                    // TODO
+                    (() =>
+                        util.getKeyList()
+                        .then(util.writeKeyToList(key))
+                        .then(util.encryptAndWriteKeyFile)
+                    )()
+                ])
+                .then(() => `Successfully imported ${src} into ${dest}`)
+                .catch(logError);
+            } else {
+                return `${dest} is not a valid path`;
+            }
+        })
+        .then(logInfo)
         .catch(logError);
+
     },
 
     list: start =>
