@@ -22,6 +22,9 @@ const argv = require('yargs')
     .example('stymie get', 'Retrieves a file')
     .command('get', 'Alias of `edit`')
 
+    .example('stymie getKeys', 'Dumps all keys to STDOUT')
+    .command('getKeys', 'Dump all keys to STDOUT')
+
     .example('stymie has', 'Checks if the file exists')
     .command('has', 'Check if the file exists')
 
@@ -66,6 +69,8 @@ if (command === 'init') {
 
                 case 'edit':
                 case 'get': file.get(argv._[1]); break;
+
+                case 'getKeys': file.getKeys(); break;
 
                 case 'has': file.has(argv._[1]); break;
 

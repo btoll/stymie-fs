@@ -93,6 +93,12 @@ const file = {
         .catch(logError);
     },
 
+    getKeys: () =>
+        util.getKeyList()
+        .then(util.stringifyKeyFile)
+        .then(logInfo)
+        .catch(logError),
+
     has: key => {
         if (!key) {
             logError('Must supply a file name');
