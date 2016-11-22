@@ -151,7 +151,7 @@ const stripBeginningSlash = filename =>
     filename.replace(reBeginningSlash, '');
 
 // Returns object, property and value (if found).
-const walkObject = (o, str) => {
+const walkObject = R.curry((str, o) => {
     const idx = str.indexOf('.');
 
     if (!~idx) {
@@ -183,7 +183,7 @@ const walkObject = (o, str) => {
     //
     //  Example:
     //
-    //      walkObject(foo, 'bar.baz.quux');
+    //      walkObject('bar.baz.quux', foo);
     //      // returns [{ quux: true }, 'quux', true]
     //
     //      Stack...
@@ -193,15 +193,15 @@ const walkObject = (o, str) => {
     //
     //  Example:
     //
-    //      walkObject(foo, 'bar.derp');
+    //      walkObject('bar.derp', foo);
     //      // returns [{ baz: ..., derp: ... }, 'derp', { herp: 5 }]
     //
     //      Stack...
     //      fn(o['bar'], 'derp');
     //      fn(o['foo'], 'bar.derp');
     //
-    return walkObject(o[str.slice(0, idx)], str.slice(idx + 1));
-};
+    return walkObject(str.slice(idx + 1), o[str.slice(0, idx)]);
+});
 
 const writeDirsToKeyList = R.curry((key, list) => createDirEntries(list, makeArrayOfDirs(key)));
 

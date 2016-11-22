@@ -107,7 +107,7 @@ const file = {
 
         util.getKeyList()
         .then(list => {
-            const [obj] = util.walkObject(list, util.getDotNotation(key));
+            const [obj] = util.walkObject(util.getDotNotation(key), list);
 
             return !obj ?
                 'Nothing to do!' :
@@ -146,8 +146,8 @@ const file = {
                 base = list;
             } else {
                 [, , base] = util.walkObject(
-                    list,
-                    util.getDotNotation(start)
+                    util.getDotNotation(start),
+                    list
                 );
             }
 
@@ -176,11 +176,8 @@ const file = {
 
     mv: (() => {
         const rename = R.curry((src, dest, oldFilename, list) => {
-            const strippedSrc = util.stripAnchorSlashes(src);
-            const strippedDest = util.stripAnchorSlashes(dest);
-
-            const [srcObj, srcProp] = util.walkObject(list, strippedSrc.replace(/\//g, '.'));
-            const [, destProp, destValue] = util.walkObject(list, strippedDest.replace(/\//g, '.'));
+            const [srcObj, srcProp] = util.walkObject(util.getDotNotation(src), list);
+            const [, destProp, destValue] = util.walkObject(util.getDotNotation(dest), list);
             const isDir = util.isDir(destValue);
 
             let newFilename;
@@ -194,7 +191,7 @@ const file = {
 //            console.log('destValue', destValue);
 
             if (isDir) {
-                const tmpName = `${strippedDest}/${srcProp}`;
+                const tmpName = `${util.stripAnchorSlashes(dest)}/${srcProp}`;
                 newFilename = `${filedir}/${util.hashFilename(tmpName)}`;
 
             } else if (!~dest.slice(1).indexOf('/')) {
@@ -247,7 +244,7 @@ const file = {
     rm: key =>
         util.getKeyList()
         .then(list => {
-            const [obj, prop, value] = util.walkObject(list, util.getDotNotation(key));
+            const [obj, prop, value] = util.walkObject(util.getDotNotation(key), list);
 
             if (value) {
                 if (util.isFile(value) || util.isEmpty(value)) {
@@ -299,8 +296,8 @@ const file = {
         util.getKeyList()
         .then(list => {
             const [obj, prop, value] = util.walkObject(
-                list,
-                dir.replace(/^\/|\/$/g, '').replace(/\//g, '.')
+                dir.replace(/^\/|\/$/g, '').replace(/\//g, '.'),
+                list
             );
 
 //            if (!obj || !obj[prop]) {
