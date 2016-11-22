@@ -103,12 +103,11 @@ const file = {
         .then(list => {
             const [obj] = util.walkObject(list, util.getDotNotation(key));
 
-            if (obj) {
-                logInfo('File exists');
-            } else {
-                logInfo('Nothing to do!');
-            }
+            return !obj ?
+                'Nothing to do!' :
+                'File exists';
         })
+        .then(logInfo)
         .catch(logError);
     },
 
@@ -161,15 +160,14 @@ const file = {
                     );
                 }
 
-                logInfo(
-                    entries.length ?
-                        `Installed files: \n${entries.join('\n')}` :
-                        'No files'
-                );
+                return !entries.length ?
+                    'No files' :
+                    `Installed files: \n${entries.join('\n')}`;
             } else {
-                logError('There was a TypeError attempting to parse the tree object. Bad object lookup?');
+                return 'There was a TypeError attempting to parse the tree object. Bad object lookup?';
             }
         })
+        .then(logInfo)
         .catch(logError),
 
     mv: (() => {
@@ -251,40 +249,43 @@ const file = {
                 const f = obj[prop];
 
                 if (util.isFile(f) || util.isEmpty(f)) {
-                    inquirer.prompt([{
-                        type: 'list',
-                        name: 'rm',
-                        message: 'Are you sure?',
-                        choices: [
-                            {name: 'Yes', value: true},
-                            {name: 'No', value: false}
-                        ]
-                    }], answers => {
-                        if (answers.rm) {
-                            delete obj[prop];
+                    return new Promise((resolve, reject) => {
+                        inquirer.prompt([{
+                            type: 'list',
+                            name: 'rm',
+                            message: 'Are you sure?',
+                            choices: [
+                                {name: 'Yes', value: true},
+                                {name: 'No', value: false}
+                            ]
+                        }], answers => {
+                            if (answers.rm) {
+                                delete obj[prop];
 
-                            util.encryptAndWriteKeyFile(list)
-                            .then(() => {
-                                logSuccess('Key removed successfully');
+                                util.encryptAndWriteKeyFile(list)
+                                .then(() => {
+                                    const hashedFilename = util.hashFilename(key);
 
-                                const hashedFilename = util.hashFilename(key);
+                                    if (util.isFile(f)) {
+                                        util.removeFile(`${filedir}/${hashedFilename}`);
+                                    }
 
-                                if (util.isFile(f)) {
-                                    util.removeFile(`${filedir}/${hashedFilename}`);
-                                }
-                            })
-                            .catch(logError);
-                        } else {
-                            logInfo('No removal');
-                        }
+                                    resolve('Key removed successfully');
+                                })
+                                .catch(reject);
+                            } else {
+                                resolve('No removal');
+                            }
+                        });
                     });
                 } else {
-                    util.logWarn(`No removal, \`${key}\` is a (non-empty) directory`);
+                    return `No removal, \`${key}\` is a non-empty directory`;
                 }
             } else {
-                logInfo('Nothing to do!');
+                return 'Nothing to do!';
             }
         })
+        .then(logInfo)
         .catch(logError),
 
     rmDir: dir => {

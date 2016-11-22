@@ -2,13 +2,14 @@
 
 const cp = require('child_process');
 const fs = require('fs');
+const inquirer = require('inquirer');
 const util = require('./util');
 
 const logError = util.logError;
 const logSuccess = util.logSuccess;
 
 module.exports = () =>
-    require('inquirer').prompt([{
+    inquirer.prompt([{
         type: 'input',
         name: 'installDir',
         message: 'Enter directory to install .stymie_fs.d:',
