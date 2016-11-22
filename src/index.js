@@ -139,12 +139,10 @@ const file = {
             if (!start) {
                 base = list;
             } else {
-                const [obj, prop] = util.walkObject(
+                [, , base] = util.walkObject(
                     list,
                     util.getDotNotation(start)
                 );
-
-                base = obj[prop];
             }
 
             if (base) {
@@ -175,19 +173,19 @@ const file = {
             const strippedSrc = util.stripAnchorSlashes(src);
             const strippedDest = util.stripAnchorSlashes(dest);
 
-            const [srcOwner, srcProp, srcObj] = util.walkObject(list, strippedSrc.replace(/\//g, '.'));
-            const [destOwner, destProp, destObj] = util.walkObject(list, strippedDest.replace(/\//g, '.'));
-            const isDir = util.isDir(destObj);
+            const [srcObj, srcProp] = util.walkObject(list, strippedSrc.replace(/\//g, '.'));
+            const [, destProp, destValue] = util.walkObject(list, strippedDest.replace(/\//g, '.'));
+            const isDir = util.isDir(destValue);
 
             let newFilename;
 
-//            console.log('srcOwner', srcOwner);
-//            console.log('srcProp', srcProp);
 //            console.log('srcObj', srcObj);
+//            console.log('srcProp', srcProp);
+//            console.log('srcValue', srcValue);
 //
-//            console.log('destOwner', destOwner);
-//            console.log('destProp', destProp);
 //            console.log('destObj', destObj);
+//            console.log('destProp', destProp);
+//            console.log('destValue', destValue);
 
             if (isDir) {
                 const tmpName = `${strippedDest}/${srcProp}`;
@@ -206,10 +204,10 @@ const file = {
                         return 'Error!';
                     } else {
                         // Update the keyfile.
-                        delete srcOwner[srcProp];
+                        delete srcObj[srcProp];
 
                         if (isDir) {
-                            destObj[srcProp] = true;
+                            destValue[srcProp] = true;
                         } else {
                             list[destProp] = true;
                         }
@@ -243,12 +241,10 @@ const file = {
     rm: key =>
         util.getKeyList()
         .then(list => {
-            const [obj, prop] = util.walkObject(list, util.getDotNotation(key));
+            const [obj, prop, value] = util.walkObject(list, util.getDotNotation(key));
 
-            if (obj) {
-                const f = obj[prop];
-
-                if (util.isFile(f) || util.isEmpty(f)) {
+            if (value) {
+                if (util.isFile(value) || util.isEmpty(value)) {
                     return new Promise((resolve, reject) => {
                         inquirer.prompt([{
                             type: 'list',
@@ -266,7 +262,7 @@ const file = {
                                 .then(() => {
                                     const hashedFilename = util.hashFilename(key);
 
-                                    if (util.isFile(f)) {
+                                    if (util.isFile(value)) {
                                         util.removeFile(`${filedir}/${hashedFilename}`);
                                     }
 
@@ -296,12 +292,13 @@ const file = {
 
         util.getKeyList()
         .then(list => {
-            const [obj, prop] = util.walkObject(
+            const [obj, prop, value] = util.walkObject(
                 list,
                 dir.replace(/^\/|\/$/g, '').replace(/\//g, '.')
             );
 
-            if (!obj || !obj[prop]) {
+//            if (!obj || !obj[prop]) {
+            if (value === null) {
                 return 'No such thing';
             } else {
                 if (!Object.keys(obj[prop]).length) {

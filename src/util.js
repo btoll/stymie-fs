@@ -150,6 +150,7 @@ const stripAnchorSlashes = filename =>
 const stripBeginningSlash = filename =>
     filename.replace(reBeginningSlash, '');
 
+// Returns object, property and value (if found).
 const walkObject = (o, str) => {
     const idx = str.indexOf('.');
 
@@ -173,17 +174,31 @@ const walkObject = (o, str) => {
     //          bar: {
     //              baz: {
     //                  quux: true
+    //              },
+    //              derp: {
+    //                  herp: 5
     //              }
     //          }
     //      };
     //
+    //  Example:
+    //
     //      walkObject(foo, 'bar.baz.quux');
-    //      // returns [{ quux: true }, 'quux']
+    //      // returns [{ quux: true }, 'quux', true]
     //
     //      Stack...
     //      fn(o['baz'], 'quux');
     //      fn(o['bar'], 'baz.quux');
     //      fn(o['foo'], 'bar.baz.quux');
+    //
+    //  Example:
+    //
+    //      walkObject(foo, 'bar.derp');
+    //      // returns [{ baz: ..., derp: ... }, 'derp', { herp: 5 }]
+    //
+    //      Stack...
+    //      fn(o['bar'], 'derp');
+    //      fn(o['foo'], 'bar.derp');
     //
     return walkObject(o[str.slice(0, idx)], str.slice(idx + 1));
 };
