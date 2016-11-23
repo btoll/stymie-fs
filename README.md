@@ -54,7 +54,7 @@ stymie-fs rm secrets
     list | List all files
     mv | Renames a file
     rm | Deletes a file
-    rmDir | Deletes a directory (only if empty)
+    rmdir | Deletes a directory (only if empty)
 
 ### Other commands and options
 

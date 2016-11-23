@@ -301,7 +301,7 @@ const file = {
         .then(logInfo)
         .catch(logError),
 
-    rmDir: dir => {
+    rmdir: dir => {
         if (!dir) {
             logError('Must supply a directory name');
             return;
