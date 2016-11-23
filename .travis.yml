@@ -1,0 +1,10 @@
+language: node_js
+node_js:
+  - "stable"
+  - "6"
+  - "5"
+  - "4"
+before_install:
+  - npm i -g eslint
+sudo: false
+

@@ -1,5 +1,7 @@
 # stymie-fs
 
+[![Build Status](https://travis-ci.org/btoll/stymie-fs.svg?branch=master)](https://travis-ci.org/btoll/stymie-fs)
+
 ## Features
 
 - Create encrypted files as well as key entries.

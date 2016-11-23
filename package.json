@@ -1,7 +1,7 @@
 {
   "name": "stymie-fs",
   "version": "0.1.0",
-  "description": "Cryptographically secure file manager for NodeJS",
+  "description": "Cryptographically secure file manager",
   "bin": {
     "stymie-fs": "./bin/stymie-fs"
   },
