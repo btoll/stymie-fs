@@ -3,7 +3,7 @@
 ## Features
 
 - Create encrypted files as well as key entries.
-- Since everything is stored in `.stymie_d/`, it's easy to port between systems.
+- Since everything is stored in `.stymie_fs.d/`, it's easy to port between systems.
 - GPG end-to-end encryption allows `stymie-fs` to be safely versioned.
 
 ## Security Features
