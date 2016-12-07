@@ -114,14 +114,14 @@ module.exports = () =>
             logSuccess(`Created encrypted entries directory ${dir}`);
 
             // Create config file.
-            return util.encryptAndWriteConfigFile(gpgOptions)
+            return util.encryptConfigDataToFile(gpgOptions)
             .catch(logError);
         })
         .then(file => {
             logSuccess(`Created encrypted config file ${file}`);
 
             // Create entry list file.
-            return util.encryptAndWriteKeyFile({})
+            return util.encryptKeyDataToFile({})
             .catch(logError);
         })
         .then(file => {

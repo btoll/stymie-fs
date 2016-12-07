@@ -11,9 +11,10 @@ module.exports = [
     // '-c', 'fcl=all',
 
     // Automatically folds indented lines when the file is opened.
-    '-c', ':set foldmethod=indent',
+    // This could add a layer of obfuscation if opening files around prying eyes.
+    // '-c', ':set foldmethod=indent',
 
-    // Don't display the first line of text (the username) in the folded text.
+    // Don't display the first line of text in the folded text.
     '-c', ":set foldtext=''",
 
     '-c', ':set viminfo='

@@ -112,13 +112,13 @@ const setFP = gpgOptions => {
     util.encrypt = jcrypt.encrypt(gpgOptions);
     util.encryptToFile = jcrypt.encryptToFile(gpgOptions);
 
-    util.encryptAndWriteConfigFile = R.compose(
-        R.composeP(writeConfigFile, util.encrypt),
+    util.encryptConfigDataToFile = R.compose(
+        jcrypt.encryptDataToFile(gpgOptions, configFile),
         stringifyKeyFile
     );
 
-    util.encryptAndWriteKeyFile = R.compose(
-        R.composeP(writeKeyFile, util.encrypt),
+    util.encryptKeyDataToFile = R.compose(
+        jcrypt.encryptDataToFile(gpgOptions, keyFile),
         stringifyKeyFile
     );
 };
@@ -216,9 +216,6 @@ const writeFile = R.curry((dest, enciphered) =>
         })
     ));
 
-const writeConfigFile = writeFile(configFile);
-const writeKeyFile = writeFile(keyFile);
-
 const writeKeyToList = R.curry((key, list) => {
     if (~key.indexOf('/')) {
         const dirname = path.dirname(key);
@@ -246,8 +243,8 @@ const util = {
     // Will be defined in #setGPGOptions.
     encrypt: null,
     encryptToFile: null,
-    encryptAndWriteConfigFile: null,
-    encryptAndWriteKeyFile: null,
+    encryptConfigDataToFile: null,
+    encryptKeyDataToFile: null,
 
     fileExists,
     getDotNotation,
@@ -263,9 +260,7 @@ const util = {
     stripBeginningSlash,
     walkObject,
     writeDirsToKeyList,
-    writeConfigFile,
     writeFile,
-    writeKeyFile,
     writeKeyToList
 };
 

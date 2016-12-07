@@ -43,7 +43,7 @@ const file = {
         const writeNewKeyDirs = util.writeDirsToKeyList(newKey);
 
         const writeDirsToKeyList = R.composeP(
-            R.compose(util.encryptAndWriteKeyFile, writeNewKeyDirs),
+            R.compose(util.encryptKeyDataToFile, writeNewKeyDirs),
             util.getKeyList
         );
 
@@ -52,7 +52,7 @@ const file = {
         //      2. Open the key list and return the parsed JSON.
         //      3. Write the new keys to the key list, encrypt it and write it to the keyfile.
         const writeKeyToList = R.composeP(
-            R.compose(util.encryptAndWriteKeyFile, writeNewKeyToList),
+            R.compose(util.encryptKeyDataToFile, writeNewKeyToList),
             util.getKeyList,
             R.composeP(writeKeyToFS, util.encrypt)
         );
@@ -78,11 +78,11 @@ const file = {
         const keyPath = `${filedir}/${util.hashFilename(key)}`;
 
         util.fileExists(keyPath).then(() =>
-            jcrypt.decryptToFile(keyPath, null)
+            jcrypt.decryptToFile(null, keyPath)
             .then(() =>
                 openEditor(keyPath, () =>
                     // Re-encrypt once done.
-                    util.encryptToFile(keyPath, null)
+                    util.encryptToFile(null, keyPath)
                     .then(() => logInfo('Re-encrypting and closing the file'))
                     .catch(logError)
                 )
@@ -132,12 +132,12 @@ const file = {
                 const key = `${util.stripAnchorSlashes(dest)}/${path.basename(src)}`;
 
                 return Promise.all([
-                    util.encryptToFile(src, `${filedir}/${util.hashFilename(key)}`),
+                    util.encryptToFile(`${filedir}/${util.hashFilename(key)}`, src),
                     // TODO
                     (() =>
                         util.getKeyList()
                         .then(util.writeKeyToList(key))
-                        .then(util.encryptAndWriteKeyFile)
+                        .then(util.encryptKeyDataToFile)
                     )()
                 ])
                 .then(() => `Successfully imported ${src} into ${dest}`)
@@ -229,7 +229,7 @@ const file = {
                             list[destProp] = true;
                         }
 
-                        return util.encryptAndWriteKeyFile(list)
+                        return util.encryptKeyDataToFile(list)
                         .then(() => resolve(`Successfully moved ${src} to ${dest}`))
                         .catch(reject);
                     }
@@ -275,7 +275,7 @@ const file = {
                             if (answers.rm) {
                                 delete obj[prop];
 
-                                util.encryptAndWriteKeyFile(list)
+                                util.encryptKeyDataToFile(list)
                                 .then(() => {
                                     const hashedFilename = util.hashFilename(key);
 
@@ -314,14 +314,13 @@ const file = {
                 list
             );
 
-//            if (!obj || !obj[prop]) {
             if (value === null) {
                 return 'No such thing';
             } else {
                 if (!Object.keys(obj[prop]).length) {
                     delete obj[prop];
 
-                    return util.encryptAndWriteKeyFile(list)
+                    return util.encryptKeyDataToFile(list)
                     .then(() => 'Key removed successfully')
                     .catch(logError);
                 } else {
