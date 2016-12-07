@@ -63,6 +63,9 @@ const getKeyList = () =>
     jcrypt.decryptFile(keyFile)
     .then(JSON.parse);
 
+const getStymieDir = () =>
+    stymieDir;
+
 const hashFilename = file => {
     if (!file) {
         return;
@@ -114,12 +117,12 @@ const setFP = gpgOptions => {
 
     util.encryptConfigDataToFile = R.compose(
         jcrypt.encryptDataToFile(gpgOptions, configFile),
-        stringifyKeyFile
+        stringify
     );
 
     util.encryptKeyDataToFile = R.compose(
         jcrypt.encryptDataToFile(gpgOptions, keyFile),
-        stringifyKeyFile
+        stringify
     );
 };
 
@@ -141,14 +144,14 @@ const setGPGOptions = options => {
     setFP(gpgOptions);
 };
 
-const stringifyKeyFile = list =>
-    JSON.stringify(list, null, 4);
+const stringify = data =>
+    JSON.stringify(data, null, 4);
 
-const stripAnchorSlashes = filename =>
-    filename.replace(reAnchors, '');
+const strip = R.curry((re, str) =>
+    str.replace(re, ''));
 
-const stripBeginningSlash = filename =>
-    filename.replace(reBeginningSlash, '');
+const stripAnchorSlashes = strip(reAnchors);
+const stripBeginningSlash = strip(reBeginningSlash);
 
 // Returns object, property and value (if found).
 const walkObject = R.curry((str, o) => {
@@ -249,13 +252,14 @@ const util = {
     fileExists,
     getDotNotation,
     getKeyList,
+    getStymieDir,
     hashFilename,
     isDir,
     isEmpty,
     isFile,
     removeFile,
     setGPGOptions,
-    stringifyKeyFile,
+    stringify,
     stripAnchorSlashes,
     stripBeginningSlash,
     walkObject,
