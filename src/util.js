@@ -23,9 +23,16 @@ const env = process.env;
 const stymieDir = `${env.STYMIE_FS || env.HOME}/.stymie_fs.d`;
 const configFile = `${stymieDir}/c`;
 const keyFile = `${stymieDir}/f`;
-const reAnchors = /^\/|\/$/g;
 const reBeginningSlash = /^\//;
-const reSwapChars = /\//g;
+const reRemoveAnchors = /^\/|\/$/g;
+const reRemoveSlashes = /\//g;
+
+const strip = R.curry((re, replacement, str) =>
+    str.replace(re, replacement));
+
+const replaceWithPeriods = strip(reRemoveSlashes, '.');
+const stripAnchorSlashes = strip(reRemoveAnchors, '');
+const stripBeginningSlash = strip(reBeginningSlash, '');
 
 const createDirEntries = (list, it) => {
     let l = list;
@@ -56,8 +63,10 @@ const fileExists = path =>
 //
 //      `/notes/fp/curry` -> `notes.fp.curry`
 //
-const getDotNotation = filename =>
-    filename.replace(reAnchors, '').replace(reSwapChars, '.');
+const getDotNotation = R.compose(
+    replaceWithPeriods,
+    stripAnchorSlashes
+);
 
 const getKeyList = () =>
     jcrypt.decryptFile(keyFile)
@@ -77,15 +86,20 @@ const hashFilename = file => {
 };
 
 // Note: "directories" are objects in the keyfile.
-const isDir = f => f && f !== true;
+const isDir = f =>
+    f && f !== true;
 
-const isEmpty = f => isDir(f) && !Object.keys(f).length;
+const isEmpty = f =>
+    isDir(f) && !Object.keys(f).length;
 
 // Note: "files" are object properties with a value of true.
-const isFile = f => f === true;
+const isFile = f =>
+    f === true;
 
-const makeArrayOfDirs = key =>
-    key.replace(reAnchors, '').split('/');
+const makeArrayOfDirs = R.compose(
+    R.split('/'),
+    stripAnchorSlashes
+);
 
 const removeFile = file =>
     new Promise((resolve, reject) =>
@@ -147,12 +161,6 @@ const setGPGOptions = options => {
 const stringify = data =>
     JSON.stringify(data, null, 4);
 
-const strip = R.curry((re, str) =>
-    str.replace(re, ''));
-
-const stripAnchorSlashes = strip(reAnchors);
-const stripBeginningSlash = strip(reBeginningSlash);
-
 // Returns object, property and value (if found).
 const walkObject = R.curry((str, o) => {
     const idx = str.indexOf('.');
@@ -206,7 +214,8 @@ const walkObject = R.curry((str, o) => {
     return walkObject(str.slice(idx + 1), o[str.slice(0, idx)]);
 });
 
-const writeDirsToKeyList = R.curry((key, list) => createDirEntries(list, makeArrayOfDirs(key)));
+const writeDirsToKeyList = R.curry((key, list) =>
+    createDirEntries(list, makeArrayOfDirs(key)));
 
 const writeFile = R.curry((dest, enciphered) =>
     new Promise((resolve, reject) =>
