@@ -87,14 +87,14 @@ const hashFilename = file => {
 
 // Note: "directories" are objects in the keyfile.
 const isDir = f =>
-    f && f !== true;
+    f && (typeof f === 'object');
 
 const isEmpty = f =>
     isDir(f) && !Object.keys(f).length;
 
-// Note: "files" are object properties with a value of true.
+// Note: "files" are object properties with a hashed value of its filename.
 const isFile = f =>
-    f === true;
+    !isDir(f);
 
 const makeArrayOfDirs = R.compose(
     R.split('/'),
@@ -162,20 +162,20 @@ const stringify = data =>
     JSON.stringify(data, null, 4);
 
 // Returns object, property and value (if found).
-const walkObject = R.curry((str, o) => {
+const walkObject = R.curry((str, obj) => {
     const idx = str.indexOf('.');
 
-    if (!~idx) {
-        const notFound = (!o || !o[str]);
+    if (!~idx || !obj) {
+        const notFound = (!obj || !obj[str]);
 
         return [
             notFound ?
                 null :
-                o,
+                obj,
             str,
             notFound ?
                 null :
-                o[str]
+                obj[str]
         ];
     }
 
@@ -184,7 +184,7 @@ const walkObject = R.curry((str, o) => {
     //      const foo = {
     //          bar: {
     //              baz: {
-    //                  quux: true
+    //                  quux: {hash}
     //              },
     //              derp: {
     //                  herp: 5
@@ -195,12 +195,12 @@ const walkObject = R.curry((str, o) => {
     //  Example:
     //
     //      walkObject('bar.baz.quux', foo);
-    //      // returns [{ quux: true }, 'quux', true]
+    //      // returns [{ quux: {hash} }, 'quux', {hash}]
     //
     //      Stack...
-    //      fn(o['baz'], 'quux');
-    //      fn(o['bar'], 'baz.quux');
-    //      fn(o['foo'], 'bar.baz.quux');
+    //      fn(obj['baz'], 'quux');
+    //      fn(obj['bar'], 'baz.quux');
+    //      fn(obj['foo'], 'bar.baz.quux');
     //
     //  Example:
     //
@@ -208,10 +208,10 @@ const walkObject = R.curry((str, o) => {
     //      // returns [{ baz: ..., derp: ... }, 'derp', { herp: 5 }]
     //
     //      Stack...
-    //      fn(o['bar'], 'derp');
-    //      fn(o['foo'], 'bar.derp');
+    //      fn(obj['bar'], 'derp');
+    //      fn(obj['foo'], 'bar.derp');
     //
-    return walkObject(str.slice(idx + 1), o[str.slice(0, idx)]);
+    return walkObject(str.slice(idx + 1), obj[str.slice(0, idx)]);
 });
 
 const writeDirsToKeyList = R.curry((key, list) =>
@@ -236,9 +236,9 @@ const writeKeyToList = R.curry((key, list) => {
         // Now write the file into the last object.
         makeArrayOfDirs(dirname).reduce(
             (acc, curr) => (acc = acc[curr], acc), list
-        )[path.basename(key)] = true;
+        )[path.basename(key)] = hashFilename(key);
     } else {
-        list[key] = true;
+        list[key] = hashFilename(key);
     }
 
     return list;

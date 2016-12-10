@@ -49,11 +49,13 @@ stymie-fs rm secrets
     ------- | --------
     add | Adds a new file or directory
     edit | Edits a file
+    export | Exports a file
     get | Retrieves a file
     getKeys | Dumps all keyst to STDOUT
     has | Checks if the file exists
     import | Imports a file
     list | List all files
+    ls | Alias of `list`
     mv | Renames a file
     rm | Deletes a file
     rmdir | Deletes a directory (only if empty)

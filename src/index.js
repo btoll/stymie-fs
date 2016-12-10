@@ -10,109 +10,18 @@ const jcrypt = require('jcrypt');
 const path = require('path');
 const util = require('./util');
 
-const env = process.env;
 const filedir = `${util.getStymieDir()}/s`;
 const logError = util.logError;
 const logInfo = util.logInfo;
 const logSuccess = util.logSuccess;
 const reIsDir = /\/$/;
 
-function openEditor(file, callback) {
-    const editor = env.EDITOR || 'vim';
-    const editorArgs = require(`${path.dirname(__filename)}/../editors/${editor}`);
-
-    // The editor modules will only contain the CLI args so we need to push on the filename.
-    editorArgs.push(file);
-
-    cp.spawn(editor, editorArgs, {
-        stdio: 'inherit'
-    }).on('exit', callback);
-}
-
-const add = key => {
-    if (!key) {
+const _export = f => {
+    if (!f) {
         logError('Must supply a file name');
         return;
     }
 
-    const newKey = util.stripBeginningSlash(key);
-    const hashedFilename = util.hashFilename(newKey);
-    const writeKeyToFS = util.writeFile(`${filedir}/${hashedFilename}`);
-    const writeNewKeyToList = util.writeKeyToList(newKey);
-    const writeNewKeyDirs = util.writeDirsToKeyList(newKey);
-
-    const writeDirsToKeyList = R.composeP(
-        R.compose(util.encryptKeyDataToFile, writeNewKeyDirs),
-        util.getKeyList
-    );
-
-    // Steps:
-    //      1. Encrypt the new key name and write it to the filesystem.
-    //      2. Open the key list and return the parsed JSON.
-    //      3. Write the new keys to the key list, encrypt it and write it to the keyfile.
-    const writeKeyToList = R.composeP(
-        R.compose(util.encryptKeyDataToFile, writeNewKeyToList),
-        util.getKeyList,
-        R.composeP(writeKeyToFS, util.encrypt)
-    );
-
-    // Creating an already-existing dir doesn't throw, but maybe clean this up.
-    if (reIsDir.test(newKey)) {
-        writeDirsToKeyList()
-        .then(() => logSuccess('Operation successful'));
-    } else {
-        // This seems counter-intuitive because the resolve and reject operations are reversed, but this is b/c
-        // the success case is when the file does not exist (and thus will throw an exception).
-        util.fileExists(`${filedir}/${hashedFilename}`)
-        .then(() => logError('File already exists'))
-        .catch(() =>
-            writeKeyToList(newKey)
-            .then(() => logSuccess('File created successfully'))
-            .catch(logError)
-        );
-    }
-};
-
-const get = key => {
-    const keyPath = `${filedir}/${util.hashFilename(key)}`;
-
-    util.fileExists(keyPath).then(() =>
-        jcrypt.decryptToFile(null, keyPath)
-        .then(() =>
-            openEditor(keyPath, () =>
-                // Re-encrypt once done.
-                util.encryptToFile(null, keyPath)
-                .then(() => logInfo('Re-encrypting and closing the file'))
-                .catch(logError)
-            )
-        )
-        .catch(logError)
-    )
-    .catch(logError);
-};
-
-const getKeys = () =>
-    util.getKeyList()
-    .then(util.stringify)
-    .then(logInfo)
-    .catch(logError);
-
-const has = key => {
-    if (!key) {
-        logError('Must supply a file name');
-        return;
-    }
-
-    util.getKeyList()
-    .then(list => {
-        const [obj] = util.walkObject(util.getDotNotation(key), list);
-
-        return !obj ?
-            'Nothing to do!' :
-            'File exists';
-    })
-    .then(logInfo)
-    .catch(logError);
 };
 
 const _import = (src, dest) => {
@@ -148,6 +57,106 @@ const _import = (src, dest) => {
     .then(logInfo)
     .catch(logError);
 
+};
+
+const add = key => {
+    if (!key) {
+        logError('Must supply a file name');
+        return;
+    }
+
+    const newKey = util.stripBeginningSlash(key);
+    const writeKeyToFS = util.writeFile(`${filedir}/${util.hashFilename(newKey)}`);
+    const writeNewKeyToList = util.writeKeyToList(newKey);
+    const writeNewKeyDirs = util.writeDirsToKeyList(newKey);
+
+    const writeDirsToKeyList = R.composeP(
+        R.compose(util.encryptKeyDataToFile, writeNewKeyDirs),
+        util.getKeyList
+    );
+
+    // Steps:
+    //      1. Encrypt the new key name and write it to the filesystem.
+    //      2. Open the key list and return the parsed JSON.
+    //      3. Write the new keys to the key list, encrypt it and write it to the keyfile.
+    const writeKeyToList = R.composeP(
+        R.compose(util.encryptKeyDataToFile, writeNewKeyToList),
+        util.getKeyList,
+        R.composeP(writeKeyToFS, util.encrypt)
+    );
+
+    // Creating an already-existing dir doesn't throw, but maybe clean this up.
+    if (reIsDir.test(newKey)) {
+        writeDirsToKeyList()
+        .then(() => logSuccess('Operation successful'));
+    } else {
+        // This seems counter-intuitive because the resolve and reject operations are reversed, but this is b/c
+        // the success case is when the file does not exist (and thus will throw an exception).
+        util.getKeyList()
+        .then(list => {
+            const [obj] = util.walkObject(util.getDotNotation(key), list);
+
+            if (!obj) {
+                return writeKeyToList(newKey)
+                .then(() => 'File created successfully');
+            } else {
+                return 'Nothing to do!';
+            }
+        })
+        .then(logInfo)
+        .catch(logError);
+    }
+};
+
+const get = key => {
+    util.getKeyList()
+    .then(list => {
+        const [, , hash] = util.walkObject(util.getDotNotation(key), list);
+
+        if (!hash) {
+            return 'Nothing to do!';
+        } else {
+            const keyPath = `${filedir}/${hash}`;
+
+            return jcrypt.decryptToFile(null, keyPath)
+            .then(() =>
+                new Promise((resolve, reject) =>
+                    openEditor(keyPath, () =>
+                        // Re-encrypt once done.
+                        util.encryptToFile(null, keyPath)
+                        .then(resolve('Re-encrypting and closing the file'))
+                        .catch(reject)
+                    )
+                )
+            );
+        }
+    })
+    .then(logInfo)
+    .catch(logError);
+};
+
+const getKeys = () =>
+    util.getKeyList()
+    .then(util.stringify)
+    .then(logInfo)
+    .catch(logError);
+
+const has = key => {
+    if (!key) {
+        logError('Must supply a file name');
+        return;
+    }
+
+    util.getKeyList()
+    .then(list => {
+        const [obj] = util.walkObject(util.getDotNotation(key), list);
+
+        return !obj ?
+            'Nothing to do!' :
+            'File exists';
+    })
+    .then(logInfo)
+    .catch(logError);
 };
 
 const list = start =>
@@ -187,24 +196,27 @@ const list = start =>
     .then(logInfo)
     .catch(logError);
 
+// TODO
 const mv = (() => {
-    const rename = R.curry((src, dest, oldFilename, list) => {
+    const rename = (src, dest, oldFilename, list) => {
         const [srcObj, srcProp] = util.walkObject(util.getDotNotation(src), list);
         const [, destProp, destValue] = util.walkObject(util.getDotNotation(dest), list);
         const isDir = util.isDir(destValue);
 
+        let hashedFilename;
         let newFilename;
 
         if (isDir) {
             const tmpName = `${util.stripAnchorSlashes(dest)}/${srcProp}`;
-            newFilename = `${filedir}/${util.hashFilename(tmpName)}`;
-
+            hashedFilename = util.hashFilename(tmpName);
         } else if (!~dest.slice(1).indexOf('/')) {
             // If no slash (/) occurs in the string or if the only presence of a slash is the first char then GO.
-            newFilename = `${filedir}/${util.hashFilename(destProp)}`;
+            hashedFilename = util.hashFilename(destProp);
         } else {
             return 'Nothing to do!';
         }
+
+        newFilename = `${filedir}/${hashedFilename}`;
 
         return new Promise((resolve, reject) =>
             fs.rename(oldFilename, newFilename, err => {
@@ -215,9 +227,9 @@ const mv = (() => {
                     delete srcObj[srcProp];
 
                     if (isDir) {
-                        destValue[srcProp] = true;
+                        destValue[srcProp] = hashedFilename;
                     } else {
-                        list[destProp] = true;
+                        list[destProp] = hashedFilename;
                     }
 
                     return util.encryptKeyDataToFile(list)
@@ -226,7 +238,7 @@ const mv = (() => {
                 }
             })
         );
-    });
+    };
 
     return (src, dest) => {
         if (!src || !dest) {
@@ -234,17 +246,33 @@ const mv = (() => {
             return ;
         }
 
-        const oldFilename = `${filedir}/${util.hashFilename(src)}`;
-        util.fileExists(oldFilename)
-        .then(() =>
-            util.getKeyList()
-            .then(rename(src, dest, oldFilename))
-            .catch(logError)
-        )
+        const hashedFilename = util.hashFilename(src);
+        const oldFilename = `${filedir}/${hashedFilename}`;
+
+        util.getKeyList()
+        .then(list => {
+            const [obj] = util.walkObject(util.getDotNotation(src), list);
+
+            return !obj ?
+                'Nothing to do!' :
+                rename(src, dest, oldFilename, list);
+        })
         .then(logInfo)
         .catch(logError);
     };
 })();
+
+const openEditor = (file, callback) => {
+    const editor = process.env.EDITOR || 'vim';
+    const editorArgs = require(`${path.dirname(__filename)}/../editors/${editor}`);
+
+    // The editor modules will only contain the CLI args so we need to push on the filename.
+    editorArgs.push(file);
+
+    cp.spawn(editor, editorArgs, {
+        stdio: 'inherit'
+    }).on('exit', callback);
+};
 
 const rm = key =>
     util.getKeyList()
@@ -324,11 +352,12 @@ const rmdir = dir => {
 };
 
 module.exports = {
+    _export,
+    _import,
     add,
     get,
     getKeys,
     has,
-    _import,
     ls: list,
     list,
     mv,
