@@ -53,6 +53,9 @@ const argv = require('yargs')
 
 const command = argv._[0];
 const env = process.env;
+const logError = util.logError;
+const logInfo = util.logInfo;
+const logSuccess = util.logSuccess;
 const stymieDir = util.getStymieDir();
 
 if (command === 'init') {
@@ -68,26 +71,70 @@ if (command === 'init') {
             util.setGPGOptions(JSON.parse(gpgOptions));
 
             switch (command) {
-                case 'add': file.add(argv._[1]); break;
+                case 'add':
+                    file.add(argv._[1])
+                    .then(() => logSuccess('Operation succeeded'))
+                    .catch(logError);
+                    break;
 
                 case 'edit':
-                case 'get': file.get(argv._[1]); break;
+                case 'get':
+                    file.get(argv._[1])
+                    .then(logInfo)
+                    .catch(logError);
+                    break;
 
                 case 'export': file._export(argv._[1]); break;
 
-                case 'getKeys': file.getKeys(); break;
+                case 'getKeys':
+                    file.getKeys()
+                    .then(logInfo)
+                    .catch(logError);
+                    break;
 
-                case 'has': file.has(argv._[1]); break;
+                case 'has':
+                    file.has(argv._[1])
+                    .then(key => 'Key exists')
+                    .then(logInfo)
+                    .catch(logError);
+                    break;
 
                 case 'import': file._import(argv._[1], argv._[2]); break;
 
                 case 'list':
-                case 'ls': file.list(argv._[1]); break;
+                case 'ls':
+                    file.list(argv._[1])
+                    .then(list => {
+                        return !list.length ?
+                            Promise.reject('Nothing to do here!') :
+                           `Installed files: \n${list.join('\n')}`;
+                    })
+                    .then(logInfo)
+                    .catch(logError);
+                    break;
 
-                case 'mv': file.mv(argv._[1], argv._[2]); break;
+                case 'mv':
+                    file.mv(argv._[1], argv._[2])
+                    .then(logInfo)
+                    .catch(logError);
+                    break;
 
-                case 'rm': file.rm(argv._[1]); break;
-                case 'rmdir': file.rmdir(argv._[1]); break;
+                case 'rm':
+                    file.rm(argv._[1])
+                    .then(logInfo)
+                    .catch(logError);
+                    break;
+
+                case 'rmdir':
+                    file.rmdir(argv._[1])
+                    .then(res =>
+                        res != null ?
+                            'Key removed successfully' :
+                            'No such thing'
+                    )
+                    .then(logInfo)
+                    .catch(logError);
+                    break;
 
                 default: util.logError('Bad command');
             }

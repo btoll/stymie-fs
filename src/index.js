@@ -11,23 +11,19 @@ const path = require('path');
 const util = require('./util');
 
 const filedir = `${util.getStymieDir()}/s`;
-const logError = util.logError;
 const logInfo = util.logInfo;
-const logSuccess = util.logSuccess;
 const reIsDir = /\/$/;
 
 const _export = f => {
     if (!f) {
-        logError('Must supply a file name');
-        return;
+        return Promise.reject('Must supply a file name');
     }
 
 };
 
 const _import = (src, dest) => {
     if (!src) {
-        logError('Must supply a file name');
-        return;
+        return Promise.reject('Must supply a file name');
     }
 
     util.fileExists(src)
@@ -48,21 +44,18 @@ const _import = (src, dest) => {
                     .then(util.encryptKeyDataToFile)
                 )()
             ])
-            .then(() => `Successfully imported ${src} into ${dest}`)
-            .catch(logError);
+            .then(() => `Successfully imported ${src} into ${dest}`);
         } else {
             return `${dest} is not a valid path`;
         }
     })
-    .then(logInfo)
-    .catch(logError);
+    .then(logInfo);
 
 };
 
 const add = key => {
     if (!key) {
-        logError('Must supply a file name');
-        return;
+        return Promise.reject('Must supply a file name');
     }
 
     const newKey = util.stripBeginningSlash(key);
@@ -87,34 +80,30 @@ const add = key => {
 
     // Creating an already-existing dir doesn't throw, but maybe clean this up.
     if (reIsDir.test(newKey)) {
-        writeDirsToKeyList()
-        .then(() => logSuccess('Operation successful'));
+        return writeDirsToKeyList();
     } else {
         // This seems counter-intuitive because the resolve and reject operations are reversed, but this is b/c
         // the success case is when the file does not exist (and thus will throw an exception).
-        util.getKeyList()
+        return util.getKeyList()
         .then(list => {
             const [obj] = util.walkObject(util.getDotNotation(key), list);
 
             if (!obj) {
-                return writeKeyToList(newKey)
-                .then(() => 'File created successfully');
+                return writeKeyToList(newKey);
             } else {
-                return 'Nothing to do!';
+                return Promise.reject('Nothing to do here!');
             }
-        })
-        .then(logInfo)
-        .catch(logError);
+        });
     }
 };
 
-const get = key => {
+const get = key =>
     util.getKeyList()
     .then(list => {
         const [, , hash] = util.walkObject(util.getDotNotation(key), list);
 
         if (!hash) {
-            return 'Nothing to do!';
+            return Promise.reject('Nothing to do here!');
         } else {
             const keyPath = `${filedir}/${hash}`;
 
@@ -130,33 +119,25 @@ const get = key => {
                 )
             );
         }
-    })
-    .then(logInfo)
-    .catch(logError);
-};
+    });
 
 const getKeys = () =>
     util.getKeyList()
-    .then(util.stringify)
-    .then(logInfo)
-    .catch(logError);
+    .then(util.stringify);
 
 const has = key => {
     if (!key) {
-        logError('Must supply a file name');
-        return;
+        return Promise.reject('Must supply a file name');
     }
 
-    util.getKeyList()
+    return util.getKeyList()
     .then(list => {
         const [obj] = util.walkObject(util.getDotNotation(key), list);
 
         return !obj ?
-            'Nothing to do!' :
-            'File exists';
-    })
-    .then(logInfo)
-    .catch(logError);
+            Promise.reject('Nothing to do!') :
+            obj;
+    });
 };
 
 const list = start =>
@@ -186,15 +167,11 @@ const list = start =>
                 );
             }
 
-            return !entries.length ?
-                'No files' :
-                `Installed files: \n${entries.join('\n')}`;
+            return entries;
         } else {
-            return 'There was a TypeError attempting to parse the tree object. Bad object lookup?';
+            return Promise.reject('There was a TypeError attempting to parse the tree object. Bad object lookup?');
         }
-    })
-    .then(logInfo)
-    .catch(logError);
+    });
 
 // TODO
 const mv = (() => {
@@ -213,7 +190,7 @@ const mv = (() => {
             // If no slash (/) occurs in the string or if the only presence of a slash is the first char then GO.
             hashedFilename = util.hashFilename(destProp);
         } else {
-            return 'Nothing to do!';
+            return Promise.reject('Nothing to do here!');
         }
 
         newFilename = `${filedir}/${hashedFilename}`;
@@ -221,7 +198,7 @@ const mv = (() => {
         return new Promise((resolve, reject) =>
             fs.rename(oldFilename, newFilename, err => {
                 if (err) {
-                    return 'Error!';
+                    reject('Error!');
                 } else {
                     // Update the keyfile.
                     delete srcObj[srcProp];
@@ -242,23 +219,20 @@ const mv = (() => {
 
     return (src, dest) => {
         if (!src || !dest) {
-            logError('Must supply both a src name and a dest name');
-            return ;
+            return Promise.reject('Must supply both a src name and a dest name');
         }
 
         const hashedFilename = util.hashFilename(src);
         const oldFilename = `${filedir}/${hashedFilename}`;
 
-        util.getKeyList()
+        return util.getKeyList()
         .then(list => {
             const [obj] = util.walkObject(util.getDotNotation(src), list);
 
             return !obj ?
-                'Nothing to do!' :
+                Promise.reject('Nothing to do!') :
                 rename(src, dest, oldFilename, list);
-        })
-        .then(logInfo)
-        .catch(logError);
+        });
     };
 })();
 
@@ -311,22 +285,19 @@ const rm = key =>
                     });
                 });
             } else {
-                return `No removal, \`${key}\` is a non-empty directory`;
+                return Promise.reject(`No removal, \`${key}\` is a non-empty directory`);
             }
         } else {
-            return 'Nothing to do!';
+            return Promise.reject('Nothing to do here!');
         }
-    })
-    .then(logInfo)
-    .catch(logError);
+    });
 
 const rmdir = dir => {
     if (!dir) {
-        logError('Must supply a directory name');
-        return;
+        return Promise.reject('Must supply a directory name');
     }
 
-    util.getKeyList()
+    return util.getKeyList()
     .then(list => {
         const [obj, prop, value] = util.walkObject(
             dir.replace(/^\/|\/$/g, '').replace(/\//g, '.'),
@@ -334,21 +305,17 @@ const rmdir = dir => {
         );
 
         if (value === null) {
-            return 'No such thing';
+            return null;
         } else {
             if (!Object.keys(obj[prop]).length) {
                 delete obj[prop];
 
-                return util.encryptKeyDataToFile(list)
-                .then(() => 'Key removed successfully')
-                .catch(logError);
+                return util.encryptKeyDataToFile(list);
             } else {
-                return `Directory ${prop} is not empty`;
+                return Promise.reject(`Directory ${prop} is not empty`);
             }
         }
-    })
-    .then(logInfo)
-    .catch(logError);
+    });
 };
 
 module.exports = {
