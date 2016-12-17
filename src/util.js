@@ -124,6 +124,17 @@ const removeFile = file =>
         })
     );
 
+const renameFile = (oldFilename, newFilename) =>
+    new Promise((resolve, reject) =>
+        fs.rename(oldFilename, newFilename, err => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve();
+            }
+        })
+    );
+
 const setFP = gpgOptions => {
     // Curry.
     util.encrypt = jcrypt.encrypt(gpgOptions);
@@ -267,6 +278,7 @@ const util = {
     isEmpty,
     isFile,
     removeFile,
+    renameFile,
     setGPGOptions,
     stringify,
     stripAnchorSlashes,

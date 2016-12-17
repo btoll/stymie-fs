@@ -4,7 +4,6 @@
 
 const R = require('ramda');
 const cp = require('child_process');
-const fs = require('fs');
 const inquirer = require('inquirer');
 const jcrypt = require('jcrypt');
 const path = require('path');
@@ -174,67 +173,70 @@ const list = start =>
     });
 
 // TODO
-const mv = (() => {
-    const rename = (src, dest, oldFilename, list) => {
-        const [srcObj, srcProp] = util.walkObject(util.getDotNotation(src), list);
-        const [, destProp, destValue] = util.walkObject(util.getDotNotation(dest), list);
-        const isDir = util.isDir(destValue);
+const mv = (src, dest) => {
+    if (!src || !dest) {
+        return Promise.reject('Must supply both a src name and a dest name');
+    }
 
-        let hashedFilename;
-        let newFilename;
+    const hashedFilename = util.hashFilename(src);
+    const oldFilename = `${filedir}/${hashedFilename}`;
 
-        if (isDir) {
-            const tmpName = `${util.stripAnchorSlashes(dest)}/${srcProp}`;
-            hashedFilename = util.hashFilename(tmpName);
-        } else if (!~dest.slice(1).indexOf('/')) {
-            // If no slash (/) occurs in the string or if the only presence of a slash is the first char then GO.
-            hashedFilename = util.hashFilename(destProp);
+    return util.getKeyList()
+    .then(list => {
+        const [obj] = util.walkObject(util.getDotNotation(src), list);
+
+        // TODO: Errors when filename is a number!
+        if (!obj) {
+            return Promise.reject('Nothing to do!');
         } else {
-            return Promise.reject('Nothing to do here!');
+            const [srcObj, srcProp, srcValue] = util.walkObject(util.getDotNotation(src), list);
+            const [, destProp, destValue] = util.walkObject(util.getDotNotation(dest), list);
+            const isDestDir = util.isDir(destValue);
+
+            let hashedFilename;
+            let newFilename;
+
+            if (util.isDir(srcValue)) {
+                return Promise.reject('Nothing to do here! (src can\t be a dir)');
+            }
+
+            if (isDestDir) {
+                hashedFilename = util.hashFilename(
+                    `${util.stripAnchorSlashes(dest)}/${srcProp}`
+                );
+
+                destValue[srcProp] = hashedFilename;
+            } else if (~['/', '.'].indexOf(path.dirname(dest))) {
+                // Moving to root dir.
+                hashedFilename = util.hashFilename(
+                    `${util.stripBeginningSlash(dest)}`
+                );
+
+                list[destProp] = hashedFilename;
+            } else {
+                // Redefine the list object to be the destination "dir" object!
+                const [, , container] = util.walkObject(util.getDotNotation(path.dirname(dest)), list);
+
+                hashedFilename = util.hashFilename(
+                    `${util.stripBeginningSlash(dest)}`
+                );
+
+                container[destProp] = hashedFilename;
+    //         } else {
+    //             return Promise.reject('Nothing to do here!');
+            }
+
+            newFilename = `${filedir}/${hashedFilename}`;
+
+            // Update the keyfile.
+            delete srcObj[srcProp];
+
+            return util.renameFile(oldFilename, newFilename)
+            .then(util.encryptKeyDataToFile(list))
+            .then(() => `Successfully moved ${src} to ${dest}`);
         }
-
-        newFilename = `${filedir}/${hashedFilename}`;
-
-        return new Promise((resolve, reject) =>
-            fs.rename(oldFilename, newFilename, err => {
-                if (err) {
-                    reject('Error!');
-                } else {
-                    // Update the keyfile.
-                    delete srcObj[srcProp];
-
-                    if (isDir) {
-                        destValue[srcProp] = hashedFilename;
-                    } else {
-                        list[destProp] = hashedFilename;
-                    }
-
-                    return util.encryptKeyDataToFile(list)
-                    .then(() => resolve(`Successfully moved ${src} to ${dest}`))
-                    .catch(reject);
-                }
-            })
-        );
-    };
-
-    return (src, dest) => {
-        if (!src || !dest) {
-            return Promise.reject('Must supply both a src name and a dest name');
-        }
-
-        const hashedFilename = util.hashFilename(src);
-        const oldFilename = `${filedir}/${hashedFilename}`;
-
-        return util.getKeyList()
-        .then(list => {
-            const [obj] = util.walkObject(util.getDotNotation(src), list);
-
-            return !obj ?
-                Promise.reject('Nothing to do!') :
-                rename(src, dest, oldFilename, list);
-        });
-    };
-})();
+    });
+};
 
 const openEditor = (file, callback) => {
     const editor = process.env.EDITOR || 'vim';
