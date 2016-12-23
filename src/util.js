@@ -228,8 +228,17 @@ const walkObject = R.curry((str, obj) => {
 const writeDirsToKeyList = R.curry((key, list) =>
     createDirEntries(list, makeArrayOfDirs(key)));
 
+// const setFileType = dest => {
+//     const extname = path.extname(dest);
+
+//     if (extname === '' || extname === '.txt') {
+//        return '/* vim: set filetype=txt : */';
+//     }
+// };
+
 const writeFile = R.curry((dest, enciphered) =>
     new Promise((resolve, reject) =>
+//         fs.writeFile(dest, setFileType(dest) || enciphered, defaultWriteOptions, err => {
         fs.writeFile(dest, enciphered, defaultWriteOptions, err => {
             if (err) {
                 reject(err);

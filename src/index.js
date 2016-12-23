@@ -12,12 +12,13 @@ const util = require('./util');
 const filedir = `${util.getStymieDir()}/s`;
 const logInfo = util.logInfo;
 const reIsDir = /\/$/;
+const reIsRoot = /^(?:\/|\.)$/;
+const reGetRootName = /^\/?(\w*)/;
 
 const _export = f => {
     if (!f) {
         return Promise.reject('Must supply a file name');
     }
-
 };
 
 const _import = (src, dest) => {
@@ -172,7 +173,6 @@ const list = start =>
         }
     });
 
-// TODO
 const mv = (src, dest) => {
     if (!src || !dest) {
         return Promise.reject('Must supply both a src name and a dest name');
@@ -191,7 +191,6 @@ const mv = (src, dest) => {
         } else {
             const [srcObj, srcProp, srcValue] = util.walkObject(util.getDotNotation(src), list);
             const [, destProp, destValue] = util.walkObject(util.getDotNotation(dest), list);
-            const isDestDir = util.isDir(destValue);
 
             let hashedFilename;
             let newFilename;
@@ -200,19 +199,25 @@ const mv = (src, dest) => {
                 return Promise.reject('Nothing to do here! (src can\t be a dir)');
             }
 
-            if (isDestDir) {
+            if (util.isDir(destValue)) {
                 hashedFilename = util.hashFilename(
                     `${util.stripAnchorSlashes(dest)}/${srcProp}`
                 );
 
                 destValue[srcProp] = hashedFilename;
-            } else if (~['/', '.'].indexOf(path.dirname(dest))) {
-                // Moving to root dir.
-                hashedFilename = util.hashFilename(
-                    `${util.stripBeginningSlash(dest)}`
-                );
+            } else if (reIsRoot.test(path.dirname(dest))) {
+                // Get the new name:
+                //      /toasty => toasty
+                //      toasty => toasty
+                //      / => swap in srcProp
+                let name = dest.replace(reGetRootName, '$1');
 
-                list[destProp] = hashedFilename;
+                if (!name) {
+                    name = srcProp;
+                }
+
+                // Moving to root dir.
+                hashedFilename = list[name] = util.hashFilename(name);
             } else {
                 // Redefine the list object to be the destination "dir" object!
                 const [, , container] = util.walkObject(util.getDotNotation(path.dirname(dest)), list);
