@@ -100,7 +100,26 @@ const add = key => {
 const get = key =>
     util.getKeyList()
     .then(list => {
-        const [, , hash] = util.walkObject(util.getDotNotation(key), list);
+        const extname = path.extname(key);
+
+        // We must first to see if there's an extension, and if so, only use the dirname to walk the object.
+        // This allows for using dotNotation to tokenize the object hierarchy and at the same time getting
+        // files like `binary.js`.
+        const k = !extname ?
+            key :
+            path.dirname(key);
+
+        let [obj, prop, hash] = util.walkObject(util.getDotNotation(k), list);
+
+        if (extname) {
+            // For example:
+            //      prop = 'binary_search'
+            //      path.basename(key) = 'binary.js'
+            //
+            //          dirObj['binary_search']['binary.js']
+            //
+            hash = obj[prop][path.basename(key)];
+        }
 
         if (!hash) {
             return Promise.reject('Nothing to do here!');
