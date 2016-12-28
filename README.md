@@ -48,10 +48,11 @@ stymie-fs rm secrets
     Command | Description
     ------- | --------
     add | Adds a new file or directory
+    cat | Dumps a file to stdout
     edit | Edits a file
     export | Exports a file
     get | Retrieves a file
-    getKeys | Dumps all keyst to STDOUT
+    getKeys | Dumps all keyst to stdout
     has | Checks if the file exists
     import | Imports a file
     list | List all files

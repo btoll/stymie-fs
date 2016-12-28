@@ -97,6 +97,12 @@ const add = key => {
     }
 };
 
+const cat = key =>
+    has(key)
+    .then(([, filehash]) =>
+        jcrypt.decryptFile(`${filedir}/${filehash}`)
+    );
+
 const get = key =>
     util.getKeyList()
     .then(list => {
@@ -151,11 +157,11 @@ const has = key => {
 
     return util.getKeyList()
     .then(list => {
-        const [obj] = util.walkObject(util.getDotNotation(key), list);
+        const [, prop, value] = util.walkObject(util.getDotNotation(key), list);
 
-        return !obj ?
+        return !value ?
             Promise.reject('Nothing to do!') :
-            obj;
+            [prop, value];
     });
 };
 
@@ -348,6 +354,7 @@ module.exports = {
     _export,
     _import,
     add,
+    cat,
     get,
     getKeys,
     has,

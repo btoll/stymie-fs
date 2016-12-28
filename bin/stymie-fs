@@ -16,6 +16,9 @@ const argv = require('yargs')
     .example('stymie add', 'Adds a new file')
     .command('add', 'Add a new file')
 
+    .example('stymie cat', 'Dumps a file to stdout')
+    .command('cat', 'Dump a file to stdout')
+
     .example('stymie edit', 'Edits a file')
     .command('edit', 'Edit a file')
 
@@ -25,8 +28,8 @@ const argv = require('yargs')
     .example('stymie get', 'Retrieves a file')
     .command('get', 'Alias of `edit`')
 
-    .example('stymie getKeys', 'Dumps all keys to STDOUT')
-    .command('getKeys', 'Dump all keys to STDOUT')
+    .example('stymie getKeys', 'Dumps all keys to stdout')
+    .command('getKeys', 'Dump all keys to stdout')
 
     .example('stymie has', 'Checks if the file exists')
     .command('has', 'Check if the file exists')
@@ -74,6 +77,12 @@ if (command === 'init') {
                 case 'add':
                     file.add(argv._[1])
                     .then(() => logSuccess('Operation succeeded'))
+                    .catch(logError);
+                    break;
+
+                case 'cat':
+                    file.cat(argv._[1])
+                    .then(data => util.logRaw(data.toString('utf8')))
                     .catch(logError);
                     break;
 
