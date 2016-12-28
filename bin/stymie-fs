@@ -8,10 +8,6 @@ const util = require('../src/util');
 
 const argv = require('yargs')
     .usage('Usage: stymie-fs <command> [options]')
-    .example('stymie init', 'Installs')
-    .command('init', 'Install the file directory and config file')
-
-    .command('', '')
 
     .example('stymie add', 'Adds a new file')
     .command('add', 'Add a new file')
@@ -36,6 +32,9 @@ const argv = require('yargs')
 
     .example('stymie import', 'Imports a file')
     .command('import', 'Import a file')
+
+    .example('stymie init', 'Install the file directory and config file')
+    .command('init', 'Install the file directory and config file')
 
     .example('stymie list', 'Lists all files')
     .command('list', 'List all files')
