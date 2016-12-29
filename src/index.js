@@ -97,23 +97,27 @@ const add = key => {
     }
 };
 
-const cat = key =>
-    has(key)
+const cat = key => {
+    if (!util.isDir(key)) {
+        return Promise.reject('Nothing to do here!');
+    }
+
+    return has(key)
     .then(([, filehash]) =>
         jcrypt.decryptFile(`${filedir}/${filehash}`)
     );
+};
 
 const get = key =>
     util.getKeyList()
     .then(list => {
-        const extname = path.extname(key);
-
-        // We must first to see if there's an extension, and if so, only use the dirname to walk the object.
-        // This allows for using dotNotation to tokenize the object hierarchy and at the same time getting
-        // files like `binary.js`.
-        const k = !extname ?
-            key :
-            path.dirname(key);
+        // Only get the extname (and treat the key as a path) if there are `/` delimiters!
+        //
+        // Only use the dirname to walk the object. This allows for using dotNotation to tokenize
+        // the object hierarchy and at the same time getting files like `binary.js`.
+        const [k, extname] = ~key.indexOf('/') ?
+            [path.dirname(key), path.extname(key)] :
+            [key, null];
 
         let [obj, prop, hash] = util.walkObject(util.getDotNotation(k), list);
 
