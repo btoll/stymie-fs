@@ -70,7 +70,7 @@ module.exports = () =>
         type: 'input',
         name: 'histignoreFile',
         message: 'We need to write the new $HISTIGNORE value.\nName of shell startup file to which it should be written:',
-        default: '.bashrc',
+        default: '~/.bashrc',
         when: answers => answers.histignore
     }], answers => {
         const home = process.env.HOME;
@@ -128,7 +128,11 @@ module.exports = () =>
             logSuccess(`Created encrypted entries list file ${file}`);
 
             if (answers.histignore) {
-                const histignoreFile = `${home}/${answers.histignoreFile}`;
+                let histignoreFile = answers.histignoreFile;
+
+                if (histignoreFile[0] === '~') {
+                    histignoreFile = `${home}/${histignoreFile.slice(2)}`;
+                }
 
                 return new Promise((resolve, reject) =>
                     fs.appendFile(histignoreFile, 'export HISTIGNORE="stymie-fs *:$HISTIGNORE"\n', 'utf8', (err) => {

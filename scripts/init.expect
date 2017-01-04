@@ -1,0 +1,27 @@
+#!/usr/bin/expect
+
+spawn stymie-fs init
+
+expect "Enter directory"
+send "\r"
+
+expect "Enter the email address"
+send "ben@benjamintoll.com\r"
+
+expect "Select how GPG/PGP"
+send "\r"
+
+expect "Should GPG/PGP"
+send "\r"
+
+expect "What hashing algorithm"
+send "\r"
+
+expect "Should \"stymie-fs *\""
+send "Yes\r"
+
+expect "We need to write"
+send "/dev/null\r"
+
+expect eof
+
