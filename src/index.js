@@ -111,17 +111,18 @@ const cat = key => {
 const get = key =>
     util.getKeyList()
     .then(list => {
+        const extname = path.extname(key);
+
         // Only get the extname (and treat the key as a path) if there are `/` delimiters!
-        //
-        // Only use the dirname to walk the object. This allows for using dotNotation to tokenize
-        // the object hierarchy and at the same time getting files like `binary.js`.
-        const [k, extname] = ~key.indexOf('/') ?
-            [path.dirname(key), path.extname(key)] :
+        const [k, ext] = ~key.indexOf('/') && extname ?
+            // Only use the dirname to walk the object. This allows for using dotNotation to tokenize
+            // the object hierarchy and at the same time getting files like `binary.js`.
+            [path.dirname(key), extname] :
             [key, null];
 
         let [obj, prop, hash] = util.walkObject(util.getDotNotation(k), list);
 
-        if (extname) {
+        if (ext) {
             // For example:
             //      prop = 'binary_search'
             //      path.basename(key) = 'binary.js'
