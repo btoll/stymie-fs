@@ -86,7 +86,7 @@ const add = key => {
         // the success case is when the file does not exist (and thus will throw an exception).
         return util.getKeyList()
         .then(list => {
-            const [obj] = util.walkObject(util.getDotNotation(key), list);
+            const [obj] = util.getFileInfo(list, key);
 
             if (!obj) {
                 return writeKeyToList(newKey);
@@ -111,28 +111,9 @@ const cat = key => {
 const get = key =>
     util.getKeyList()
     .then(list => {
-        const extname = path.extname(key);
+        const [, , hash] = util.getFileInfo(list, key);
 
-        // Only get the extname (and treat the key as a path) if there are `/` delimiters!
-        const [k, ext] = ~key.indexOf('/') && extname ?
-            // Only use the dirname to walk the object. This allows for using dotNotation to tokenize
-            // the object hierarchy and at the same time getting files like `binary.js`.
-            [path.dirname(key), extname] :
-            [key, null];
-
-        let [obj, prop, hash] = util.walkObject(util.getDotNotation(k), list);
-
-        if (ext) {
-            // For example:
-            //      prop = 'binary_search'
-            //      path.basename(key) = 'binary.js'
-            //
-            //          dirObj['binary_search']['binary.js']
-            //
-            hash = obj[prop][path.basename(key)];
-        }
-
-        if (!hash) {
+        if (!hash || util.isDir(hash)) {
             return Promise.reject('Nothing to do here!');
         } else {
             const keyPath = `${filedir}/${hash}`;
@@ -162,7 +143,7 @@ const has = key => {
 
     return util.getKeyList()
     .then(list => {
-        const [, prop, value] = util.walkObject(util.getDotNotation(key), list);
+        const [, prop, value] = util.getFileInfo(list, key);
 
         return !value ?
             Promise.reject('Nothing to do!') :
@@ -213,14 +194,16 @@ const mv = (src, dest) => {
 
     return util.getKeyList()
     .then(list => {
-        const [obj] = util.walkObject(util.getDotNotation(src), list);
+//         const [obj] = util.walkObject(util.getDotNotation(src), list);
+        const [srcObj, srcProp, srcValue] = util.getFileInfo(list, src);
 
         // TODO: Errors when filename is a number!
-        if (!obj) {
+        if (!srcObj) {
             return Promise.reject('Nothing to do!');
         } else {
-            const [srcObj, srcProp, srcValue] = util.walkObject(util.getDotNotation(src), list);
-            const [, destProp, destValue] = util.walkObject(util.getDotNotation(dest), list);
+//             const [srcObj, srcProp, srcValue] = util.walkObject(util.getDotNotation(src), list);
+//             const [, destProp, destValue] = util.walkObject(util.getDotNotation(dest), list);
+            const [, destProp, destValue] = util.getFileInfo(list, dest);
 
             let hashedFilename;
             let newFilename;
@@ -250,7 +233,8 @@ const mv = (src, dest) => {
                 hashedFilename = list[name] = util.hashFilename(name);
             } else {
                 // Redefine the list object to be the destination "dir" object!
-                const [, , container] = util.walkObject(util.getDotNotation(path.dirname(dest)), list);
+//                 const [, , container] = util.walkObject(util.getDotNotation(path.dirname(dest)), list);
+                const [, , container] = util.getFileInfo(list, path.dirname(dest));
 
                 hashedFilename = util.hashFilename(
                     `${util.stripBeginningSlash(dest)}`
@@ -288,7 +272,8 @@ const openEditor = (file, callback) => {
 const rm = key =>
     util.getKeyList()
     .then(list => {
-        const [obj, prop, value] = util.walkObject(util.getDotNotation(key), list);
+//         const [obj, prop, value] = util.walkObject(util.getDotNotation(key), list);
+        const [obj, prop, value] = util.getFileInfo(list, key);
 
         if (value) {
             if (util.isFile(value) || util.isEmpty(value)) {

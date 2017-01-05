@@ -68,6 +68,31 @@ const getDotNotation = R.compose(
     stripAnchorSlashes
 );
 
+const getFileInfo = (list, key) => {
+    const extname = path.extname(key);
+
+    // Only use the extname (and treat the key as a path) if there are `/`s and the extname exists!
+    const [k, ext] = ~key.indexOf('/') && extname ?
+        // Only use the dirname to walk the object. This allows for using dotNotation to tokenize
+        // the object hierarchy and at the same time getting files like `binary.js`.
+        [path.dirname(key), extname] :
+        [key, null];
+
+    let [obj, prop, hash] = walkObject(getDotNotation(k), list);
+
+    if (ext) {
+        // For example:
+        //      prop = 'binary_search'
+        //      path.basename(key) = 'binary.js'
+        //
+        //          dirObj['binary_search']['binary.js']
+        //
+        hash = obj[prop][path.basename(key)];
+    }
+
+    return [obj, prop, hash];
+};
+
 const getKeyList = () =>
     jcrypt.decryptFile(keyFile)
     .then(JSON.parse);
@@ -280,6 +305,7 @@ const util = {
 
     fileExists,
     getDotNotation,
+    getFileInfo,
     getKeyList,
     getStymieDir,
     hashFilename,
