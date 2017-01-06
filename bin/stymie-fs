@@ -18,8 +18,8 @@ const argv = require('yargs')
     .example('stymie edit', 'Edits a file')
     .command('edit', 'Edit a file')
 
-    .example('stymie export', 'Exports a file')
-    .command('export', 'Export a file')
+    .example('stymie export', 'Exports a file or directory')
+    .command('export', 'Export a file or directory')
 
     .example('stymie get', 'Retrieves a file')
     .command('get', 'Alias of `edit`')
@@ -92,7 +92,13 @@ if (command === 'init') {
                     .catch(logError);
                     break;
 
-                case 'export': file._export(argv._[1]); break;
+                case 'export':
+                    const toExport = argv._[1];
+
+                    file._export(toExport)
+                    .then(() => logInfo(`Exported ${toExport} to ${stymieDir}`))
+                    .catch(logError);
+                    break;
 
                 case 'getKeys':
                     file.getKeys()
@@ -102,12 +108,14 @@ if (command === 'init') {
 
                 case 'has':
                     file.has(argv._[1])
-                    .then(key => 'Key exists')
-                    .then(logInfo)
+                    .then(key => logInfo('Key exists'))
                     .catch(logError);
                     break;
 
-                case 'import': file._import(argv._[1], argv._[2]); break;
+                case 'import':
+                    file._import(argv._[1], argv._[2])
+                    .then(logInfo);
+                    break;
 
                 case 'list':
                 case 'ls':

@@ -50,9 +50,9 @@ stymie-fs rm secrets
     add | Adds a new file or directory
     cat | Dumps a file to stdout
     edit | Edits a file
-    export | Exports a file
+    export | Exports a file or directory
     get | Retrieves a file
-    getKeys | Dumps all keyst to stdout
+    getKeys | Dumps all keys to stdout
     has | Checks if the file exists
     import | Imports a file
     list | List all files

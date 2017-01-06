@@ -9,15 +9,29 @@ const jcrypt = require('jcrypt');
 const path = require('path');
 const util = require('./util');
 
-const filedir = `${util.getStymieDir()}/s`;
-const logInfo = util.logInfo;
+const fileDir = `${util.getStymieDir()}/s`;
 const reIsDir = /\/$/;
 const reIsRoot = /^(?:\/|\.)$/;
 const reGetRootName = /^\/?(\w*)/;
 
-const _export = f => {
-    if (!f) {
-        return Promise.reject('Must supply a file name');
+const _export = toExport => {
+    // TODO: This is a temporary way to export everything.
+    if (toExport === '/') {
+        return util.getKeyList()
+        .then(list =>
+            util._export(toExport, list)
+        );
+    } else {
+        return has(toExport)
+        .then(([, filename, hash]) => {
+            if (util.isDir(hash) && !util.isEmpty(hash)) {
+                return util._export(toExport, hash);
+            } else {
+                return util._export(path.dirname(toExport), {
+                    [`${filename}`]: hash
+                });
+            }
+        });
     }
 };
 
@@ -36,7 +50,7 @@ const _import = (src, dest) => {
             const key = `${util.stripAnchorSlashes(dest)}/${path.basename(src)}`;
 
             return Promise.all([
-                util.encryptToFile(`${filedir}/${util.hashFilename(key)}`, src),
+                util.encryptToFile(`${fileDir}/${util.hashFilename(key)}`, src),
                 // TODO
                 (() =>
                     util.getKeyList()
@@ -48,8 +62,7 @@ const _import = (src, dest) => {
         } else {
             return `${dest} is not a valid path`;
         }
-    })
-    .then(logInfo);
+    });
 
 };
 
@@ -59,7 +72,7 @@ const add = key => {
     }
 
     const newKey = util.stripBeginningSlash(key);
-    const writeKeyToFS = util.writeFile(`${filedir}/${util.hashFilename(newKey)}`);
+    const writeKeyToFS = util.writeFile(`${fileDir}/${util.hashFilename(newKey)}`);
     const writeNewKeyToList = util.writeKeyToList(newKey);
     const writeNewKeyDirs = util.writeDirsToKeyList(newKey);
 
@@ -104,7 +117,7 @@ const cat = key =>
             return Promise.reject('Nothing to do here!');
         }
 
-        return jcrypt.decryptFile(`${filedir}/${hash}`);
+        return jcrypt.decryptFile(`${fileDir}/${hash}`);
     });
 
 const get = key =>
@@ -115,7 +128,7 @@ const get = key =>
         if (!hash || util.isDir(hash)) {
             return Promise.reject('Nothing to do here!');
         } else {
-            const keyPath = `${filedir}/${hash}`;
+            const keyPath = `${fileDir}/${hash}`;
 
             return jcrypt.decryptToFile(null, keyPath)
             .then(() =>
@@ -189,7 +202,7 @@ const mv = (src, dest) => {
     }
 
     const hashedFilename = util.hashFilename(src);
-    const oldFilename = `${filedir}/${hashedFilename}`;
+    const oldFilename = `${fileDir}/${hashedFilename}`;
 
     return util.getKeyList()
     .then(list => {
@@ -244,7 +257,7 @@ const mv = (src, dest) => {
     //             return Promise.reject('Nothing to do here!');
             }
 
-            newFilename = `${filedir}/${hashedFilename}`;
+            newFilename = `${fileDir}/${hashedFilename}`;
 
             // Update the keyfile.
             delete srcObj[srcProp];
@@ -294,7 +307,7 @@ const rm = key =>
                                 const hashedFilename = util.hashFilename(key);
 
                                 if (util.isFile(value)) {
-                                    util.removeFile(`${filedir}/${hashedFilename}`);
+                                    util.removeFile(`${fileDir}/${hashedFilename}`);
                                 }
 
                                 resolve('Key removed successfully');

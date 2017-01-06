@@ -8,6 +8,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const jcrypt = require('jcrypt');
 const logger = require('logger');
+const mkdirp = require('mkdirp');
 const path = require('path');
 const which = require('which');
 
@@ -22,6 +23,7 @@ const defaultWriteOptions = {
 const env = process.env;
 const stymieDir = `${env.STYMIE_FS || env.HOME}/.stymie_fs.d`;
 const configFile = `${stymieDir}/c`;
+const fileDir = `${stymieDir}/s`;
 const keyFile = `${stymieDir}/f`;
 const reBeginningSlash = /^\//;
 const reRemoveAnchors = /^\/|\/$/g;
@@ -46,6 +48,39 @@ const createDirEntries = (list, it) => {
     }
 
     return list;
+};
+
+const _export = (toExport, hash) => {
+    // TODO: Temporarily put any exports in `$STYMIE_FS/root`.
+    const dest = `${stymieDir}/root/${toExport}`;
+
+    return new Promise((resolve, reject) =>
+        mkdirp(dest, err => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(dest);
+            }
+        })
+    )
+    .then(() => {
+        const futures = [];
+
+        for (let key of Object.keys(hash)) {
+            const value = hash[key];
+
+            if (util.isFile(value)) {
+                futures.push(jcrypt.decryptFile(`${fileDir}/${value}`)
+                .then(data =>
+                    util.writeFile(`${dest}/${key}`, data.toString('utf8'))
+                ));
+            } else {
+                futures.push(_export(`${toExport}/${key}`, value));
+            }
+        }
+
+        return Promise.all(futures);
+    });
 };
 
 const fileExists = path =>
@@ -303,6 +338,7 @@ const util = {
     encryptConfigDataToFile: null,
     encryptKeyDataToFile: null,
 
+    _export,
     fileExists,
     getDotNotation,
     getFileInfo,
