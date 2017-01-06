@@ -97,16 +97,15 @@ const add = key => {
     }
 };
 
-const cat = key => {
-    if (!util.isDir(key)) {
-        return Promise.reject('Nothing to do here!');
-    }
+const cat = key =>
+    has(key)
+    .then(([, , hash]) => {
+        if (util.isDir(hash)) {
+            return Promise.reject('Nothing to do here!');
+        }
 
-    return has(key)
-    .then(([, filehash]) =>
-        jcrypt.decryptFile(`${filedir}/${filehash}`)
-    );
-};
+        return jcrypt.decryptFile(`${filedir}/${hash}`);
+    });
 
 const get = key =>
     util.getKeyList()
@@ -143,11 +142,11 @@ const has = key => {
 
     return util.getKeyList()
     .then(list => {
-        const [, prop, value] = util.getFileInfo(list, key);
+        const [obj, prop, value] = util.getFileInfo(list, key);
 
         return !value ?
             Promise.reject('Nothing to do!') :
-            [prop, value];
+            [obj, prop, value];
     });
 };
 
