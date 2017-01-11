@@ -15,7 +15,6 @@ const reIsRoot = /^(?:\/|\.)$/;
 const reGetRootName = /^\/?(\w*)/;
 
 const _export = toExport => {
-    // TODO: This is a temporary way to export everything.
     if (toExport === '/') {
         return util.getKeyList()
         .then(list =>
@@ -40,11 +39,9 @@ const _import = (src, dest) => {
         return Promise.reject('Must supply a file name');
     }
 
-    util.fileExists(src)
-    .then(util.getKeyList)
-    .then(util.walkObject(util.getDotNotation(dest)))
-    .then(walkedObject => {
-        const [, , value] = walkedObject;
+    return util.getKeyList()
+    .then(list => {
+        const [, , value] = util.getFileInfo(list, dest);
 
         if (value !== null) {
             const key = `${util.stripAnchorSlashes(dest)}/${path.basename(src)}`;
