@@ -73,7 +73,7 @@ stymie-fs rm secrets
 
 ## License
 
-[MIT](LICENSE)
+[GPLv3](COPYING)
 
 ## Author
 
